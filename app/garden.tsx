@@ -1,92 +1,92 @@
 // app/garden.tsx
 import React, { useContext } from 'react';
-import { View, Text, Image, Animated, PanResponder, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
+import { View, Text, Animated, ScrollView, TouchableOpacity, StyleSheet, Dimensions, Alert } from 'react-native';
 import { GameContext } from './GameContext';
+import DraggableGardenItem from '../components/DraggableGardenItem';
 
 const { width, height } = Dimensions.get('window');
 
-export default function GardenScreen() {
-  const { gardenDecorations, addGardenDecoration, gardeningInventory, availableGardening } = useContext(GameContext);
+export default function GardenDecoration() {
+  // Retrieve garden-related state from context.
+  const { gardeningInventory, gardenDecorations, addGardenDecoration, availableGardening } = useContext(GameContext);
+
+  // Count placed garden items.
+  const placedCount = gardenDecorations.reduce((acc, item) => {
+    acc[item.name] = (acc[item.name] || 0) + 1;
+    return acc;
+  }, {});
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Garden Decoration</Text>
+      {/* The garden area container must be relative */}
       <View style={styles.gardenArea}>
         {gardenDecorations.map((item) => (
-          <DraggableItem key={item.id} item={item} />
+          <DraggableGardenItem
+            key={item.id}
+            item={item}
+            onDragEnd={(newPos) => {
+              console.log('New garden item position', item.id, newPos);
+            }}
+          />
         ))}
       </View>
       <View style={styles.sidePanel}>
         <Text style={styles.panelTitle}>Gardening Inventory</Text>
-        {Object.entries(availableGardening).map(([name, data]) => (
-          <TouchableOpacity
-            key={name}
-            style={styles.inventoryItem}
-            onPress={() => {
-              const newItem = {
-                id: Date.now(),
-                name,
-                x: 50,
-                y: 50,
-                rotation: 0,
-                image: data.image,
-              };
-              addGardenDecoration(newItem);
-            }}
-          >
-            <Text>{name} (Owned: {gardeningInventory[name] || 0})</Text>
-          </TouchableOpacity>
-        ))}
+        <ScrollView>
+          {Object.entries(availableGardening).map(([name, data]) => {
+            const inventoryCount = gardeningInventory[name] || 0;
+            const alreadyPlaced = placedCount[name] || 0;
+            const availableCount = inventoryCount - alreadyPlaced;
+            return (
+              <TouchableOpacity
+                key={name}
+                style={styles.inventoryItem}
+                onPress={() => {
+                  if (availableCount > 0) {
+                    const newItem = {
+                      id: Date.now(),
+                      name,
+                      x: 50,
+                      y: 50,
+                      rotation: 0,
+                      image: data.image,
+                    };
+                    addGardenDecoration(newItem);
+                  } else {
+                    Alert.alert("No More Items", `You have no more ${name} available.`);
+                  }
+                }}
+              >
+                <Text>{name} (Available: {availableCount})</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
       </View>
     </View>
-  );
-}
-
-function DraggableItem({ item }) {
-  const [pan] = React.useState(new Animated.ValueXY({ x: item.x, y: item.y }));
-  const [rotation, setRotation] = React.useState(item.rotation);
-
-  const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onPanResponderGrant: () => {
-      pan.setOffset({ x: pan.x._value, y: pan.y._value });
-      pan.setValue({ x: 0, y: 0 });
-    },
-    onPanResponderMove: Animated.event(
-      [null, { dx: pan.x, dy: pan.y }],
-      { useNativeDriver: false }
-    ),
-    onPanResponderRelease: () => {
-      pan.flattenOffset();
-    },
-  });
-
-  const handleRotate = () => {
-    setRotation(prev => (prev + 90) % 360);
-  };
-
-  return (
-    <Animated.View
-      {...panResponder.panHandlers}
-      style={[
-        styles.draggable,
-        { transform: [{ translateX: pan.x }, { translateY: pan.y }, { rotate: `${rotation}deg` }] },
-      ]}
-    >
-      <TouchableOpacity onPress={handleRotate}>
-        <Image source={item.image} style={styles.itemImage} />
-      </TouchableOpacity>
-    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   title: { fontSize: 24, textAlign: 'center', marginVertical: 10 },
-  gardenArea: { width: width, height: height * 0.5, backgroundColor: '#aaffaa' },
-  sidePanel: { position: 'absolute', right: 0, top: 50, backgroundColor: '#fff', padding: 10, borderWidth: 1 },
+  // The gardenArea container must be relative
+  gardenArea: {
+    position: 'relative',
+    width: width,
+    height: height * 0.5,
+    backgroundColor: '#aaffaa',
+  },
+  sidePanel: {
+    position: 'absolute',
+    right: 0,
+    top: 50,
+    backgroundColor: '#fff',
+    padding: 10,
+    borderWidth: 1,
+    height: height * 0.5,
+  },
   panelTitle: { fontWeight: 'bold', marginBottom: 5 },
   inventoryItem: { marginBottom: 10 },
-  draggable: { position: 'absolute' },
-  itemImage: { width: 50, height: 50 },
 });

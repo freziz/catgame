@@ -1,50 +1,61 @@
 // app/GameContext.tsx
 import React, { createContext, useState, useEffect } from 'react';
 
+// Create the context so all components can share global state
 export const GameContext = createContext(null);
 
-// Configuration for available items:
+// Configuration objects for each item category:
+
+// Passive buildings (e.g., "Cat Tower") provide passive income.
 const availableBuildings = { 
   "Cat Tower": { cost: 50, income: 1 }
 };
 
+// Furniture items for decorating the purchased home.
 const availableFurniture = { 
   "Sofa": { cost: 100, image: require('../assets/sofa.png') }, 
   "Table": { cost: 150, image: require('../assets/table.png') } 
 };
 
+// Gardening items for decorating the garden.
 const availableGardening = { 
   "Fountain": { cost: 150, image: require('../assets/fountain.png') }, 
   "Bench": { cost: 80, image: require('../assets/bench.png') } 
 };
 
+// Cat accessories for customizing cats.
 const availableCatAccessories = { 
   "Hat": { cost: 50, image: require('../assets/hat.png') }, 
   "Bowtie": { cost: 30, image: require('../assets/bowtie.png') } 
 };
 
+// Real estate: Homes available for purchase.
 const availableHomes = { 
   "Small House": { cost: 1000, floorPlan: require('../assets/small_house.png') }, 
   "Large House": { cost: 3000, floorPlan: require('../assets/large_house.png') } 
 };
 
 export function GameProvider({ children }) {
+  // Points that the player currently has (spendable).
   const [points, setPoints] = useState(0);
+  // Total points ever earned (cumulative, used for determining cats).
   const [totalPointsEarned, setTotalPointsEarned] = useState(0);
   const [clicks, setClicks] = useState(0);
-  // Each cat is an object: { id, customization: {} }
+  // Array of cat objects; each cat is created for every 5 cumulative points.
   const [cats, setCats] = useState([]);
-  // Passive buildings: { "Cat Tower": count, ... }
+  // Passive buildings purchased (e.g., { "Cat Tower": count })
   const [passiveBuildings, setPassiveBuildings] = useState({});
-  // (Other shop inventories and decoration state remain the same)
+  // Inventories for shop items; these counts indicate how many have been purchased.
   const [furnitureInventory, setFurnitureInventory] = useState({});
   const [gardeningInventory, setGardeningInventory] = useState({});
   const [catAccessoriesInventory, setCatAccessoriesInventory] = useState({});
+  // Real estate: purchased home (if any)
   const [purchasedHome, setPurchasedHome] = useState(null);
+  // Decorations placed in the home and garden (each item is an object)
   const [homeDecorations, setHomeDecorations] = useState([]);
   const [gardenDecorations, setGardenDecorations] = useState([]);
 
-  // Passive income: every second, add points equal to the sum of (count * income)
+  // Every second, add passive income based on purchased buildings.
   useEffect(() => {
     const interval = setInterval(() => {
       let totalIncome = 0;
@@ -53,19 +64,21 @@ export function GameProvider({ children }) {
         totalIncome += count * availableBuildings[building].income;
       }
       if (totalIncome > 0) {
-        // Do not check for cats here because totalPointsEarned is cumulative
+        // Do not check for cats here because we only count via cumulative points.
         addPoints(totalIncome, false);
       }
     }, 1000);
     return () => clearInterval(interval);
   }, [passiveBuildings]);
 
-  // For every 5 total points earned, add a cat (never remove cats)
+  // addPoints: adds points to the player and updates the total cumulative points.
+  // Every 5 cumulative points, a new cat is added (if not already created).
   const addPoints = (amount, checkCats = true) => {
     setPoints(prev => prev + amount);
     setTotalPointsEarned(prev => {
       const newTotal = prev + amount;
       if (checkCats) {
+        // Calculate how many cats should exist (1 cat per 5 cumulative points).
         const expectedCats = Math.floor(newTotal / 5);
         if (expectedCats > cats.length) {
           setCats(prevCats => {
@@ -81,12 +94,13 @@ export function GameProvider({ children }) {
     });
   };
 
-  // A click adds 1 point (cats are based on total points, not current points)
+  // handleClick: invoked on each click; adds 1 point.
   const handleClick = () => {
     setClicks(prev => prev + 1);
     addPoints(1000);
   };
 
+  // buyBuilding: purchases a passive building (e.g., Cat Tower).
   const buyBuilding = (buildingName) => {
     const building = availableBuildings[buildingName];
     if (!building) return false;
@@ -101,7 +115,7 @@ export function GameProvider({ children }) {
     return false;
   };
 
-  // Buy shop items for different categories
+  // buyShopItem: purchases an item from a given shop category.
   const buyShopItem = (category, itemName) => {
     let item;
     if (category === 'Furniture') {
@@ -141,7 +155,7 @@ export function GameProvider({ children }) {
     return false;
   };
 
-  // Purchase a home from the real estate page
+  // buyHome: allows the user to purchase a home.
   const buyHome = (homeType) => {
     const home = availableHomes[homeType];
     if (!home) return false;
@@ -153,15 +167,17 @@ export function GameProvider({ children }) {
     return false;
   };
 
+  // addHomeDecoration: adds a furniture item to the home decoration state.
   const addHomeDecoration = (item) => {
     setHomeDecorations(prev => [...prev, item]);
   };
 
+  // addGardenDecoration: adds a gardening item to the garden decoration state.
   const addGardenDecoration = (item) => {
     setGardenDecorations(prev => [...prev, item]);
   };
 
-  // Update a cat's customization
+  // updateCatCustomization: updates a specific cat's customization details.
   const updateCatCustomization = (catId, customization) => {
     setCats(prevCats => prevCats.map(cat => cat.id === catId ? { ...cat, customization } : cat));
   };
@@ -192,6 +208,8 @@ export function GameProvider({ children }) {
       availableGardening,
       availableCatAccessories,
       availableHomes,
+      // Expose setters for accessory inventory (needed in CatEditor)
+      setCatAccessoriesInventory,
     }}>
       {children}
     </GameContext.Provider>

@@ -8,8 +8,11 @@ export default function CatsScreen() {
   const { cats } = useContext(GameContext);
   const router = useRouter();
 
-  const renderItem = ({ item }) => (
-    <TouchableOpacity style={styles.catItem} onPress={() => router.push({ pathname: '/catEditor', params: { catId: item.id } })}>
+  const renderItem = ({ item }: any) => (
+    <TouchableOpacity
+      style={styles.catItem}
+      onPress={() => router.push(`/CatDetail?catId=${item.id}`)}
+    >
       <Image source={require('../../assets/cat.png')} style={styles.catImage} />
       <Text>Cat #{item.id}</Text>
     </TouchableOpacity>

@@ -1,0 +1,1099 @@
+﻿import { Link, Stack } from 'expo-router';
+import { StyleSheet } from 'react-native';
+
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
+
+export default function NotFoundScreen() {
+  return (
+    <>
+      <Stack.Screen options={{ title: 'Oops!' }} />
+      <ThemedView style={styles.container}>
+        <ThemedText type="title">This screen doesn't exist.</ThemedText>
+        <Link href="/" style={styles.link}>
+          <ThemedText type="link">Go to home screen!</ThemedText>
+        </Link>
+      </ThemedView>
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  link: {
+    marginTop: 15,
+    paddingVertical: 15,
+  },
+});
+// app/catEditor.tsx
+import React, { useContext, useState } from 'react';
+import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Alert, Animated, PanResponder } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { GameContext } from './GameContext';
+
+export default function CatEditor() {
+  // Retrieve the catId from URL parameters
+  const { catId } = useLocalSearchParams();
+  // Destructure global context items for cats and accessories
+  const { cats, updateCatCustomization, availableCatAccessories, catAccessoriesInventory, setCatAccessoriesInventory } = useContext(GameContext);
+  const router = useRouter();
+  
+  // Find the cat that matches the given ID
+  const cat = cats.find(c => c.id == catId);
+  if (!cat) {
+    return (
+      <View style={styles.container}>
+        <Text>Cat not found.</Text>
+      </View>
+    );
+  }
+  
+  // Customization state holds an array of accessories with position and rotation.
+  const [customization, setCustomization] = useState(cat.customization || { accessories: [] });
+  
+  // Function to add an accessory from inventory to the cat.
+  const addAccessory = (accessoryName) => {
+    if ((catAccessoriesInventory[accessoryName] || 0) > 0) {
+      // New accessory with default position and rotation
+      const newAccessory = {
+        name: accessoryName,
+        x: 50, 
+        y: 50,
+        rotation: 0,
+      };
+      const newAccessories = [...(customization.accessories || []), newAccessory];
+      setCustomization({ ...customization, accessories: newAccessories });
+      updateCatCustomization(cat.id, { ...customization, accessories: newAccessories });
+      // Decrement inventory count for the accessory
+      setCatAccessoriesInventory(prev => ({
+        ...prev,
+        [accessoryName]: prev[accessoryName] - 1,
+      }));
+      Alert.alert("Accessory Added", `Added ${accessoryName} to your cat.`);
+    } else {
+      Alert.alert("Not Available", `You don't have any ${accessoryName} available.`);
+    }
+  };
+
+  return (
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.title}>Edit Your Cat</Text>
+      <View style={styles.catContainer}>
+        {/* Render the base cat image */}
+        <Image source={require('../assets/cat.png')} style={styles.catImage} />
+        {/* Overlay each accessory as draggable */}
+        {customization.accessories && customization.accessories.map((acc, index) => (
+          <DraggableAccessory 
+            key={index} 
+            accessory={acc} 
+            index={index} 
+            customization={customization} 
+            setCustomization={setCustomization} 
+            updateCatCustomization={updateCatCustomization} 
+            catId={cat.id} 
+          />
+        ))}
+      </View>
+      <Text style={styles.subtitle}>Available Accessories:</Text>
+      {/* List available accessories from inventory */}
+      {Object.entries(availableCatAccessories).map(([name, data]) => {
+        const count = catAccessoriesInventory[name] || 0;
+        return (
+          count > 0 && (
+            <TouchableOpacity
+              key={name}
+              style={styles.button}
+              onPress={() => addAccessory(name)}
+            >
+              <Text style={styles.buttonText}>Add {name} (Available: {count})</Text>
+            </TouchableOpacity>
+          )
+        );
+      })}
+      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <Text style={styles.buttonText}>Back to Cats</Text>
+      </TouchableOpacity>
+    </ScrollView>
+  );
+}
+
+// DraggableAccessory: Allows dragging an accessory overlay on the cat image.
+function DraggableAccessory({ accessory, index, customization, setCustomization, updateCatCustomization, catId }) {
+  // Use a ref for animated position
+  const pan = React.useRef(new Animated.ValueXY({ x: accessory.x, y: accessory.y })).current;
+  const [rotation, setRotation] = useState(accessory.rotation);
+
+  const panResponder = React.useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        // Set offset when starting the drag
+        pan.setOffset({ x: pan.x._value, y: pan.y._value });
+        pan.setValue({ x: 0, y: 0 });
+      },
+      onPanResponderMove: Animated.event(
+        [null, { dx: pan.x, dy: pan.y }],
+        { useNativeDriver: false }
+      ),
+      onPanResponderRelease: () => {
+        pan.flattenOffset();
+        // Update accessory position in customization state
+        const newAccessories = [...(customization.accessories || [])];
+        newAccessories[index] = { ...newAccessories[index], x: pan.x._value, y: pan.y._value, rotation };
+        setCustomization({ ...customization, accessories: newAccessories });
+        updateCatCustomization(catId, { ...customization, accessories: newAccessories });
+      },
+    })
+  ).current;
+
+  // Handle rotation on accessory tap
+  const handleRotate = () => {
+    const newRotation = (rotation + 90) % 360;
+    setRotation(newRotation);
+    const newAccessories = [...(customization.accessories || [])];
+    newAccessories[index] = { ...newAccessories[index], rotation: newRotation };
+    setCustomization({ ...customization, accessories: newAccessories });
+    updateCatCustomization(catId, { ...customization, accessories: newAccessories });
+  };
+
+  return (
+    <Animated.View
+      {...panResponder.panHandlers}
+      style={[
+        styles.draggableAccessory,
+        {
+          transform: [
+            { translateX: pan.x },
+            { translateY: pan.y },
+            { rotate: `${rotation}deg` },
+          ],
+        },
+      ]}
+    >
+      <TouchableOpacity onPress={handleRotate}>
+        {/* For demonstration, using the hat image; in a complete version, dynamically load image based on accessory name */}
+        <Image source={require('../assets/hat.png')} style={styles.accessoryImage} />
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flexGrow: 1, alignItems: 'center', padding: 20 },
+  title: { fontSize: 28, marginBottom: 10 },
+  catContainer: { width: 200, height: 200, position: 'relative', marginBottom: 20 },
+  catImage: { width: 200, height: 200, resizeMode: 'contain' },
+  subtitle: { fontSize: 20, marginVertical: 10 },
+  button: { backgroundColor: 'teal', padding: 10, borderRadius: 10, marginVertical: 5 },
+  buttonText: { color: '#fff', fontSize: 16 },
+  backButton: { marginTop: 20, backgroundColor: 'gray', padding: 10, borderRadius: 10 },
+  draggableAccessory: {
+    position: 'absolute',
+  },
+  accessoryImage: { width: 50, height: 50 },
+});
+// app/(tabs)/catRace.tsx
+import React, { useContext, useEffect, useRef, useState } from 'react';
+import { View, Text, Animated, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import { GameContext } from './GameContext';
+
+const { width } = Dimensions.get('window');
+
+export default function CatRace() {
+  const { cats } = useContext(GameContext);
+  // Create animated values for each cat's horizontal position
+  const [catPositions, setCatPositions] = useState(
+    cats.map(() => new Animated.Value(0))
+  );
+  
+
+  // Start race: animate cats from left to right continuously
+  useEffect(() => {
+    catPositions.forEach((pos, index) => {
+      Animated.loop(
+        Animated.timing(pos, {
+          toValue: width - 100, // race across the screen
+          duration: 10000,
+          useNativeDriver: false,
+        })
+      ).start();
+    });
+  }, [catPositions]);
+
+  // Function to boost a cat when tapped
+  const boostCat = (index) => {
+    Animated.timing(catPositions[index], {
+      toValue: width - 50,
+      duration: 2000,
+      useNativeDriver: false,
+    }).start(() => {
+      // Reset the position after boost
+      catPositions[index].setValue(0);
+    });
+  };
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Cat Race</Text>
+      {cats.map((cat, index) => (
+        <TouchableOpacity key={cat.id} onPress={() => boostCat(index)}>
+          <Animated.Image
+            source={require('../assets/cat.png')}
+            style={[styles.catImage, { left: catPositions[index] }]}
+          />
+        </TouchableOpacity>
+      ))}
+      <Text style={styles.instructions}>Tap a cat to boost its speed!</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, padding: 20, justifyContent: 'center' },
+  title: { fontSize: 28, textAlign: 'center', marginBottom: 20 },
+  catImage: { width: 50, height: 50, position: 'absolute', top: 100 },
+  instructions: { textAlign: 'center', marginTop: 50, fontSize: 16 },
+});
+// app/GameContext.tsx
+import React, { createContext, useState, useEffect } from 'react';
+
+export const GameContext = createContext(null);
+
+// Configuration for available items:
+const availableBuildings = { 
+  "Cat Tower": { cost: 50, income: 1 }
+};
+
+const availableFurniture = { 
+  "Sofa": { cost: 100, image: require('../assets/sofa.png') }, 
+  "Table": { cost: 150, image: require('../assets/table.png') } 
+};
+
+const availableGardening = { 
+  "Fountain": { cost: 150, image: require('../assets/fountain.png') }, 
+  "Bench": { cost: 80, image: require('../assets/bench.png') } 
+};
+
+const availableCatAccessories = { 
+  "Hat": { cost: 50, image: require('../assets/hat.png') }, 
+  "Bowtie": { cost: 30, image: require('../assets/bowtie.png') } 
+};
+
+const availableHomes = { 
+  "Small House": { cost: 1000, floorPlan: require('../assets/small_house.png') }, 
+  "Large House": { cost: 3000, floorPlan: require('../assets/large_house.png') } 
+};
+
+export function GameProvider({ children }) {
+  const [points, setPoints] = useState(0);
+  const [totalPointsEarned, setTotalPointsEarned] = useState(0);
+  const [clicks, setClicks] = useState(0);
+  // Each cat is an object: { id, customization: {} }
+  const [cats, setCats] = useState([]);
+  // Passive buildings: { "Cat Tower": count, ... }
+  const [passiveBuildings, setPassiveBuildings] = useState({});
+  // (Other shop inventories and decoration state remain the same)
+  const [furnitureInventory, setFurnitureInventory] = useState({});
+  const [gardeningInventory, setGardeningInventory] = useState({});
+  const [catAccessoriesInventory, setCatAccessoriesInventory] = useState({});
+  const [purchasedHome, setPurchasedHome] = useState(null);
+  const [homeDecorations, setHomeDecorations] = useState([]);
+  const [gardenDecorations, setGardenDecorations] = useState([]);
+
+  // Passive income: every second, add points equal to the sum of (count * income)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      let totalIncome = 0;
+      for (const building in passiveBuildings) {
+        const count = passiveBuildings[building];
+        totalIncome += count * availableBuildings[building].income;
+      }
+      if (totalIncome > 0) {
+        // Do not check for cats here because totalPointsEarned is cumulative
+        addPoints(totalIncome, false);
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [passiveBuildings]);
+
+  // For every 5 total points earned, add a cat (never remove cats)
+  const addPoints = (amount, checkCats = true) => {
+    setPoints(prev => prev + amount);
+    setTotalPointsEarned(prev => {
+      const newTotal = prev + amount;
+      if (checkCats) {
+        const expectedCats = Math.floor(newTotal / 5);
+        if (expectedCats > cats.length) {
+          setCats(prevCats => {
+            const newCats = [...prevCats];
+            while (newCats.length < expectedCats) {
+              newCats.push({ id: newCats.length, customization: {} });
+            }
+            return newCats;
+          });
+        }
+      }
+      return newTotal;
+    });
+  };
+
+  // A click adds 1 point (cats are based on total points, not current points)
+  const handleClick = () => {
+    setClicks(prev => prev + 1);
+    addPoints(1000);
+  };
+
+  const buyBuilding = (buildingName) => {
+    const building = availableBuildings[buildingName];
+    if (!building) return false;
+    if (points >= building.cost) {
+      setPoints(prev => prev - building.cost);
+      setPassiveBuildings(prev => ({
+        ...prev,
+        [buildingName]: (prev[buildingName] || 0) + 1,
+      }));
+      return true;
+    }
+    return false;
+  };
+
+  // Buy shop items for different categories
+  const buyShopItem = (category, itemName) => {
+    let item;
+    if (category === 'Furniture') {
+      item = availableFurniture[itemName];
+      if (!item) return false;
+      if (points >= item.cost) {
+        setPoints(prev => prev - item.cost);
+        setFurnitureInventory(prev => ({
+          ...prev,
+          [itemName]: (prev[itemName] || 0) + 1,
+        }));
+        return true;
+      }
+    } else if (category === 'Gardening') {
+      item = availableGardening[itemName];
+      if (!item) return false;
+      if (points >= item.cost) {
+        setPoints(prev => prev - item.cost);
+        setGardeningInventory(prev => ({
+          ...prev,
+          [itemName]: (prev[itemName] || 0) + 1,
+        }));
+        return true;
+      }
+    } else if (category === 'CatAccessories') {
+      item = availableCatAccessories[itemName];
+      if (!item) return false;
+      if (points >= item.cost) {
+        setPoints(prev => prev - item.cost);
+        setCatAccessoriesInventory(prev => ({
+          ...prev,
+          [itemName]: (prev[itemName] || 0) + 1,
+        }));
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // Purchase a home from the real estate page
+  const buyHome = (homeType) => {
+    const home = availableHomes[homeType];
+    if (!home) return false;
+    if (points >= home.cost) {
+      setPoints(prev => prev - home.cost);
+      setPurchasedHome({ type: homeType, floorPlan: home.floorPlan, decorations: [] });
+      return true;
+    }
+    return false;
+  };
+
+  const addHomeDecoration = (item) => {
+    setHomeDecorations(prev => [...prev, item]);
+  };
+
+  const addGardenDecoration = (item) => {
+    setGardenDecorations(prev => [...prev, item]);
+  };
+
+  // Update a cat's customization
+  const updateCatCustomization = (catId, customization) => {
+    setCats(prevCats => prevCats.map(cat => cat.id === catId ? { ...cat, customization } : cat));
+  };
+
+  return (
+    <GameContext.Provider value={{
+      points,
+      totalPointsEarned,
+      clicks,
+      cats,
+      passiveBuildings,
+      furnitureInventory,
+      gardeningInventory,
+      catAccessoriesInventory,
+      setCatAccessoriesInventory,
+      purchasedHome,
+      homeDecorations,
+      gardenDecorations,
+      addPoints,
+      handleClick,
+      buyBuilding,
+      buyShopItem,
+      buyHome,
+      addHomeDecoration,
+      addGardenDecoration,
+      updateCatCustomization,
+      availableBuildings,
+      availableFurniture,
+      availableGardening,
+      availableCatAccessories,
+      availableHomes,
+    }}>
+      {children}
+    </GameContext.Provider>
+  );
+}
+// app/garden.tsx
+import React, { useContext } from 'react';
+import { View, Text, Animated, ScrollView, TouchableOpacity, StyleSheet, Dimensions, Alert } from 'react-native';
+import { GameContext } from './GameContext';
+import DraggableGardenItem from '../components/DraggableGardenItem';
+
+const { width, height } = Dimensions.get('window');
+
+export default function GardenDecoration() {
+  // Retrieve garden-related state from context.
+  const { gardeningInventory, gardenDecorations, addGardenDecoration, availableGardening } = useContext(GameContext);
+
+  // Count placed garden items.
+  const placedCount = gardenDecorations.reduce((acc, item) => {
+    acc[item.name] = (acc[item.name] || 0) + 1;
+    return acc;
+  }, {});
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Garden Decoration</Text>
+      {/* The garden area container must be relative */}
+      <View style={styles.gardenArea}>
+        {gardenDecorations.map((item) => (
+          <DraggableGardenItem
+            key={item.id}
+            item={item}
+            onDragEnd={(newPos) => {
+              console.log('New garden item position', item.id, newPos);
+            }}
+          />
+        ))}
+      </View>
+      <View style={styles.sidePanel}>
+        <Text style={styles.panelTitle}>Gardening Inventory</Text>
+        <ScrollView>
+          {Object.entries(availableGardening).map(([name, data]) => {
+            const inventoryCount = gardeningInventory[name] || 0;
+            const alreadyPlaced = placedCount[name] || 0;
+            const availableCount = inventoryCount - alreadyPlaced;
+            return (
+              <TouchableOpacity
+                key={name}
+                style={styles.inventoryItem}
+                onPress={() => {
+                  if (availableCount > 0) {
+                    const newItem = {
+                      id: Date.now(),
+                      name,
+                      x: 50,
+                      y: 50,
+                      rotation: 0,
+                      image: data.image,
+                    };
+                    addGardenDecoration(newItem);
+                  } else {
+                    Alert.alert("No More Items", `You have no more ${name} available.`);
+                  }
+                }}
+              >
+                <Text>{name} (Available: {availableCount})</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  title: { fontSize: 24, textAlign: 'center', marginVertical: 10 },
+  // The gardenArea container must be relative
+  gardenArea: {
+    position: 'relative',
+    width: width,
+    height: height * 0.5,
+    backgroundColor: '#aaffaa',
+  },
+  sidePanel: {
+    position: 'absolute',
+    right: 0,
+    top: 50,
+    backgroundColor: '#fff',
+    padding: 10,
+    borderWidth: 1,
+    height: height * 0.5,
+  },
+  panelTitle: { fontWeight: 'bold', marginBottom: 5 },
+  inventoryItem: { marginBottom: 10 },
+});
+// app/homeDecoration.tsx
+import React, { useContext } from 'react';
+import { View, Text, Image, ScrollView, TouchableOpacity, StyleSheet, Dimensions, Alert } from 'react-native';
+import { GameContext } from './GameContext';
+import DraggableFurniture from '../components/DraggableFurniture';
+
+const { width, height } = Dimensions.get('window');
+
+export default function HomeDecoration() {
+  // Retrieve home-related state from the context.
+  const { purchasedHome, homeDecorations, addHomeDecoration, furnitureInventory, availableFurniture } = useContext(GameContext);
+
+  // Count how many furniture items of each type have already been placed.
+  const placedCount = homeDecorations.reduce((acc, item) => {
+    acc[item.name] = (acc[item.name] || 0) + 1;
+    return acc;
+  }, {});
+
+  if (!purchasedHome) {
+    return (
+      <View style={styles.container}>
+        <Text>You haven't purchased a home yet.</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Home Decoration</Text>
+      {/* The floor plan container should be relative to allow absolute children */}
+      <View style={styles.floorPlanContainer}>
+        <Image source={purchasedHome.floorPlan} style={styles.floorPlan} />
+        {/* Render each placed furniture item as a draggable component */}
+        {homeDecorations.map((item) => (
+          <DraggableFurniture
+            key={item.id}
+            item={item}
+            onDragEnd={(newPos) => {
+              // Optionally update the position in your state here.
+              // For example: updateHomeDecorationPosition(item.id, newPos)
+              console.log('New position for item', item.id, newPos);
+            }}
+          />
+        ))}
+      </View>
+      {/* Side panel showing furniture inventory */}
+      <View style={styles.sidePanel}>
+        <Text style={styles.panelTitle}>Furniture Inventory</Text>
+        <ScrollView>
+          {Object.entries(availableFurniture).map(([name, data]) => {
+            const inventoryCount = furnitureInventory[name] || 0;
+            const alreadyPlaced = placedCount[name] || 0;
+            const availableCount = inventoryCount - alreadyPlaced;
+            return (
+              <TouchableOpacity
+                key={name}
+                style={styles.inventoryItem}
+                onPress={() => {
+                  if (availableCount > 0) {
+                    const newItem = {
+                      id: Date.now(),
+                      name,
+                      x: 50,
+                      y: 50,
+                      rotation: 0,
+                      image: data.image,
+                    };
+                    addHomeDecoration(newItem);
+                  } else {
+                    Alert.alert("No More Items", `You have no more ${name} available.`);
+                  }
+                }}
+              >
+                <Text>{name} (Available: {availableCount})</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  title: { fontSize: 24, textAlign: 'center', marginVertical: 10 },
+  // The floorPlanContainer must have relative positioning
+  floorPlanContainer: {
+    position: 'relative',
+    width: width,
+    height: height * 0.5,
+  },
+  floorPlan: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'contain',
+  },
+  sidePanel: {
+    position: 'absolute',
+    right: 0,
+    top: 50,
+    backgroundColor: '#fff',
+    padding: 10,
+    borderWidth: 1,
+    height: height * 0.5,
+  },
+  panelTitle: { fontWeight: 'bold', marginBottom: 5 },
+  inventoryItem: { marginBottom: 10 },
+});
+// app/HomeScreen.tsx
+import React from "react";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { useRouter } from "expo-router";
+
+export default function HomeScreen() {
+  const router = useRouter();
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>ðŸ± Cat Catcher ðŸ±</Text>
+      <TouchableOpacity style={styles.button} onPress={() => router.replace("/(tabs)")}>
+        <Text style={styles.buttonText}>Start Game</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, justifyContent: "center", alignItems: "center" },
+  title: { fontSize: 32, fontWeight: "bold", marginBottom: 20 },
+  button: { backgroundColor: "blue", padding: 15, borderRadius: 10 },
+  buttonText: { color: "white", fontSize: 18 },
+});
+// app/_layout.tsx
+import React from 'react';
+import { Stack } from "expo-router";
+import { GameProvider } from './GameContext';
+
+export default function RootLayout() {
+  return (
+    <GameProvider>
+      <Stack>
+        <Stack.Screen name="HomeScreen" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      </Stack>
+    </GameProvider>
+  );
+}
+// app/(tabs)/cats.tsx
+import React, { useContext } from 'react';
+import { View, Text, Image, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
+import { useRouter } from 'expo-router';
+import { GameContext } from '../GameContext';
+
+export default function CatsScreen() {
+  const { cats } = useContext(GameContext);
+  const router = useRouter();
+
+  const renderItem = ({ item }) => (
+    <TouchableOpacity style={styles.catItem} onPress={() => router.push({ pathname: '/catEditor', params: { catId: item.id } })}>
+      <Image source={require('../../assets/cat.png')} style={styles.catImage} />
+      <Text>Cat #{item.id}</Text>
+    </TouchableOpacity>
+  );
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Your Cats</Text>
+      <FlatList
+        data={cats}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={renderItem}
+        numColumns={3}
+        contentContainerStyle={styles.list}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, alignItems: 'center', padding: 10 },
+  title: { fontSize: 28, marginBottom: 10 },
+  list: { alignItems: 'center' },
+  catItem: { margin: 5, alignItems: 'center' },
+  catImage: { width: 50, height: 50 },
+});
+// app/(tabs)/index.tsx, app/(tabs)/explore.tsx, app/(tabs)/another_screen.tsx
+import { View, Text, StyleSheet } from 'react-native';
+
+export default function TabScreen(props:any) {
+  return (
+    <View style={styles.container}>
+      <Text style={styles.text}>{props.children || "Tab Content"}</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  text: {
+    fontSize: 18,
+  },
+});
+// app/(tabs)/index.tsx
+import React, { useContext, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Button } from 'react-native';
+import { GameContext } from '../GameContext';
+// Import the reusable NavBar
+import NavBar from '../../components/NavBar';
+
+export default function ClickerScreen() {
+  const { points, handleClick, passiveBuildings } = useContext(GameContext);
+  const [sidebarVisible, setSidebarVisible] = useState(true);
+
+  return (
+    <View style={styles.container}>
+      {/* Main navigation bar at the top */}
+      <NavBar />
+
+      {/* Display current points */}
+      <Text style={styles.counter}>Points: {points}</Text>
+
+      {/* Button to add points */}
+      <TouchableOpacity style={styles.clickButton} onPress={handleClick}>
+        <Text style={styles.clickText}>Get Cat Food</Text>
+      </TouchableOpacity>
+
+      {/* Toggle sidebar for passive buildings */}
+      <Button title={sidebarVisible ? "Hide Sidebar" : "Show Sidebar"} onPress={() => setSidebarVisible(!sidebarVisible)} />
+      {sidebarVisible && (
+        <View style={styles.sidebar}>
+          <Text style={styles.sidebarTitle}>Passive Buildings</Text>
+          {Object.entries(passiveBuildings).map(([name, count]) => (
+            <Text key={name}>{name}: {count}</Text>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, padding: 20, justifyContent: 'center', alignItems: 'center' },
+  counter: { fontSize: 24, marginVertical: 10 },
+  clickButton: { backgroundColor: 'orange', padding: 20, borderRadius: 10 },
+  clickText: { fontSize: 20, color: '#fff' },
+  sidebar: {
+    position: 'absolute',
+    right: 10,
+    top: 50,
+    backgroundColor: '#eee',
+    padding: 10,
+    borderRadius: 5,
+  },
+  sidebarTitle: { fontWeight: 'bold', marginBottom: 5 },
+});
+// app/(tabs)/realestate.tsx
+import React, { useContext } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { GameContext } from '../GameContext';
+
+export default function RealEstateScreen() {
+  // Destructure points, home purchase function, purchased home, and available homes from context
+  const { points, buyHome, purchasedHome, availableHomes } = useContext(GameContext);
+  
+  return (
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.points}>Your Points: {points}</Text>
+      <Text style={styles.title}>Real Estate</Text>
+      {purchasedHome ? (
+        <Text style={styles.info}>You own a {purchasedHome.type}</Text>
+      ) : (
+        // List available homes for purchase
+        Object.entries(availableHomes).map(([name, data]) => (
+          <View key={name} style={styles.homeContainer}>
+            <Text style={styles.homeText}>
+              {name} - Cost: {data.cost} pts
+            </Text>
+            <TouchableOpacity
+              style={styles.buyButton}
+              onPress={() => {
+                if (buyHome(name)) {
+                  alert("Purchased " + name);
+                } else {
+                  alert("Not enough points for " + name);
+                }
+              }}
+            >
+              <Text style={styles.buttonText}>Buy {name}</Text>
+            </TouchableOpacity>
+          </View>
+        ))
+      )}
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flexGrow: 1, padding: 20, alignItems: 'center' },
+  points: { fontSize: 20, marginBottom: 10 },
+  title: { fontSize: 28, marginBottom: 20 },
+  homeContainer: { marginBottom: 15, alignItems: 'center' },
+  homeText: { fontSize: 16, marginBottom: 5 },
+  buyButton: { backgroundColor: 'brown', padding: 10, borderRadius: 10 },
+  buttonText: { color: '#fff', fontSize: 16 },
+  info: { fontSize: 18 },
+});
+// app/(tabs)/_layout.tsx
+import { Tabs } from "expo-router";
+
+export default function TabsLayout() {
+  return (
+    <Tabs>
+      <Tabs.Screen name="index" options={{ title: "Game" }} />
+      <Tabs.Screen name="shop" options={{ title: "Shop" }} />
+      <Tabs.Screen name="realestate" options={{ title: "Real Estate" }} />
+      <Tabs.Screen name="garden" options={{ title: "Garden" }} />
+      <Tabs.Screen name="cats" options={{ title: "Cats" }} />
+    </Tabs>
+  );
+}
+// app/(tabs)/shop/BuildingsScreen.tsx
+import React, { useContext } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { GameContext } from '../../GameContext';
+
+export default function BuildingsScreen() {
+  const { points, buyBuilding, passiveBuildings, availableBuildings } = useContext(GameContext);
+
+  return (
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.points}>Your Points: {points}</Text>
+      <Text style={styles.title}>Passive Buildings</Text>
+      {Object.entries(availableBuildings).map(([name, data]) => {
+        const count = passiveBuildings[name] || 0;
+        return (
+          <View key={name} style={styles.itemContainer}>
+            <Text style={styles.itemText}>
+              {name} - Cost: {data.cost} pts | Income: {data.income} pts/sec | Owned: {count}
+            </Text>
+            <TouchableOpacity
+              style={styles.buyButton}
+              onPress={() => {
+                if (buyBuilding(name)) {
+                  alert("Purchased " + name);
+                } else {
+                  alert("Not enough points for " + name);
+                }
+              }}
+            >
+              <Text style={styles.buttonText}>Buy {name}</Text>
+            </TouchableOpacity>
+          </View>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flexGrow: 1, padding: 20, alignItems: 'center' },
+  points: { fontSize: 20, marginBottom: 10 },
+  title: { fontSize: 28, marginBottom: 20 },
+  itemContainer: { marginBottom: 15, alignItems: 'center' },
+  itemText: { fontSize: 16, marginBottom: 5 },
+  buyButton: { backgroundColor: 'green', padding: 10, borderRadius: 10 },
+  buttonText: { color: '#fff', fontSize: 16 },
+});
+// app/(tabs)/shop/CatClothesScreen.tsx
+import React, { useContext } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { GameContext } from '../../GameContext';
+
+export default function CatClothesScreen() {
+  const { points, buyShopItem, catAccessoriesInventory, availableCatAccessories } = useContext(GameContext);
+  return (
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.points}>Your Points: {points}</Text>
+      <Text style={styles.title}>Cat Clothes & Toys</Text>
+      {Object.entries(availableCatAccessories).map(([name, data]) => {
+        const count = catAccessoriesInventory[name] || 0;
+        return (
+          <View key={name} style={styles.itemContainer}>
+            <Text style={styles.itemText}>
+              {name} - Cost: {data.cost} pts | Owned: {count}
+            </Text>
+            <TouchableOpacity
+              style={styles.buyButton}
+              onPress={() => {
+                if (buyShopItem('CatAccessories', name)) {
+                  alert("Purchased " + name);
+                } else {
+                  alert("Not enough points for " + name);
+                }
+              }}
+            >
+              <Text style={styles.buttonText}>Buy {name}</Text>
+            </TouchableOpacity>
+          </View>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flexGrow: 1, padding: 20, alignItems: 'center' },
+  points: { fontSize: 20, marginBottom: 10 },
+  title: { fontSize: 28, marginBottom: 20 },
+  itemContainer: { marginBottom: 15, alignItems: 'center' },
+  itemText: { fontSize: 16, marginBottom: 5 },
+  buyButton: { backgroundColor: 'purple', padding: 10, borderRadius: 10 },
+  buttonText: { color: '#fff', fontSize: 16 },
+});
+// app/(tabs)/shop/FurnitureScreen.tsx
+import React, { useContext } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { GameContext } from '../../GameContext';
+
+export default function FurnitureScreen() {
+  const { points, buyShopItem, furnitureInventory, availableFurniture } = useContext(GameContext);
+  return (
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.points}>Your Points: {points}</Text>
+      <Text style={styles.title}>House Furniture</Text>
+      {Object.entries(availableFurniture).map(([name, data]) => {
+        const count = furnitureInventory[name] || 0;
+        return (
+          <View key={name} style={styles.itemContainer}>
+            <Text style={styles.itemText}>
+              {name} - Cost: {data.cost} pts | Owned: {count}
+            </Text>
+            <TouchableOpacity
+              style={styles.buyButton}
+              onPress={() => {
+                if (buyShopItem('Furniture', name)) {
+                  alert("Purchased " + name);
+                } else {
+                  alert("Not enough points for " + name);
+                }
+              }}
+            >
+              <Text style={styles.buttonText}>Buy {name}</Text>
+            </TouchableOpacity>
+          </View>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flexGrow: 1, padding: 20, alignItems: 'center' },
+  points: { fontSize: 20, marginBottom: 10 },
+  title: { fontSize: 28, marginBottom: 20 },
+  itemContainer: { marginBottom: 15, alignItems: 'center' },
+  itemText: { fontSize: 16, marginBottom: 5 },
+  buyButton: { backgroundColor: 'purple', padding: 10, borderRadius: 10 },
+  buttonText: { color: '#fff', fontSize: 16 },
+});
+// app/(tabs)/shop/GardeningScreen.tsx
+import React, { useContext } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { GameContext } from '../../GameContext';
+
+export default function GardeningScreen() {
+  const { points, buyShopItem, gardeningInventory, availableGardening } = useContext(GameContext);
+  return (
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.points}>Your Points: {points}</Text>
+      <Text style={styles.title}>Gardening Supplies</Text>
+      {Object.entries(availableGardening).map(([name, data]) => {
+        const count = gardeningInventory[name] || 0;
+        return (
+          <View key={name} style={styles.itemContainer}>
+            <Text style={styles.itemText}>
+              {name} - Cost: {data.cost} pts | Owned: {count}
+            </Text>
+            <TouchableOpacity
+              style={styles.buyButton}
+              onPress={() => {
+                if (buyShopItem('Gardening', name)) {
+                  alert("Purchased " + name);
+                } else {
+                  alert("Not enough points for " + name);
+                }
+              }}
+            >
+              <Text style={styles.buttonText}>Buy {name}</Text>
+            </TouchableOpacity>
+          </View>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flexGrow: 1, padding: 20, alignItems: 'center' },
+  points: { fontSize: 20, marginBottom: 10 },
+  title: { fontSize: 28, marginBottom: 20 },
+  itemContainer: { marginBottom: 15, alignItems: 'center' },
+  itemText: { fontSize: 16, marginBottom: 5 },
+  buyButton: { backgroundColor: 'purple', padding: 10, borderRadius: 10 },
+  buttonText: { color: '#fff', fontSize: 16 },
+});
+// app/(tabs)/shop.tsx
+import React from 'react';
+import { View, StyleSheet } from 'react-native';
+import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
+// Import the reusable NavBar
+import NavBar from '../../../components/NavBar';
+import BuildingsScreen from './BuildingsScreen';
+import CatClothesScreen from './CatClothesScreen';
+import FurnitureScreen from './FurnitureScreen';
+import GardeningScreen from './GardeningScreen';
+
+const Tab = createMaterialTopTabNavigator();
+
+export default function ShopScreen() {
+  return (
+    <View style={styles.container}>
+      {/* For the Shop screen, use a relative NavBar that does not overlap the shop tabs */}
+      <View style={styles.navbarContainer}>
+        <NavBar />
+      </View>
+      <Tab.Navigator style={styles.tabNavigator}>
+        <Tab.Screen name="Buildings" component={BuildingsScreen} options={{ title: 'Buildings' }} />
+        <Tab.Screen name="CatClothes" component={CatClothesScreen} options={{ title: 'Cat Clothes & Toys' }} />
+        <Tab.Screen name="Furniture" component={FurnitureScreen} options={{ title: 'House Furniture' }} />
+        <Tab.Screen name="Gardening" component={GardeningScreen} options={{ title: 'Gardening Supplies' }} />
+      </Tab.Navigator>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  // Wrap the NavBar in a container that uses relative positioning
+  navbarContainer: { position: 'relative', zIndex: 10 },
+  // Optionally add marginTop to shift the tabs below the NavBar
+  tabNavigator: { marginTop: 10 },
+});
