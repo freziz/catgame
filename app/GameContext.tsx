@@ -20,7 +20,7 @@ const availableFurniture = {
 // Gardening items for decorating the garden.
 const availableGardening = { 
   "Fountain": { cost: 150, image: require('../assets/fountain.png') }, 
-  "Bench": { cost: 80, image: require('../assets/bench.png') } 
+  "Bench": { cost: 80, image: require('../assets/bench.png') },
 };
 
 // Cat accessories for customizing cats.
@@ -34,6 +34,8 @@ const availableHomes = {
   "Small House": { cost: 1000, floorPlan: require('../assets/small_house.png') }, 
   "Large House": { cost: 3000, floorPlan: require('../assets/large_house.png') } 
 };
+
+const POINTS_PER_CAT = 5; // 1 cat per 5 cumulative points
 
 export function GameProvider({ children }) {
   // Points that the player currently has (spendable).
@@ -64,40 +66,37 @@ export function GameProvider({ children }) {
         totalIncome += count * availableBuildings[building].income;
       }
       if (totalIncome > 0) {
-        // Do not check for cats here because we only count via cumulative points.
-        addPoints(totalIncome, false);
+        addPoints(totalIncome);
       }
     }, 1000);
     return () => clearInterval(interval);
   }, [passiveBuildings]);
 
   // addPoints: adds points to the player and updates the total cumulative points.
-  // Every 5 cumulative points, a new cat is added (if not already created).
-  const addPoints = (amount, checkCats = true) => {
+  // Every POINTS_PER_CAT cumulative points, a new cat is added.
+  const addPoints = (amount) => {
     setPoints(prev => prev + amount);
     setTotalPointsEarned(prev => {
       const newTotal = prev + amount;
-      if (checkCats) {
-        // Calculate how many cats should exist (1 cat per 5 cumulative points).
-        const expectedCats = Math.floor(newTotal / 5);
-        if (expectedCats > cats.length) {
-          setCats(prevCats => {
-            const newCats = [...prevCats];
-            while (newCats.length < expectedCats) {
-              newCats.push({ id: newCats.length, customization: {} });
-            }
-            return newCats;
-          });
-        }
+      // Calculate how many cats should exist (1 cat per POINTS_PER_CAT points).
+      const expectedCats = Math.floor(newTotal / POINTS_PER_CAT);
+      if (expectedCats > cats.length) {
+        setCats(prevCats => {
+          const newCats = [...prevCats];
+          while (newCats.length < expectedCats) {
+            newCats.push({ id: newCats.length, customization: {} });
+          }
+          return newCats;
+        });
       }
       return newTotal;
     });
   };
 
-  // handleClick: invoked on each click; adds 1 point.
+  // handleClick: invoked on each click; adds 50 points.
   const handleClick = () => {
     setClicks(prev => prev + 1);
-    addPoints(1000);
+    addPoints(50);
   };
 
   // buyBuilding: purchases a passive building (e.g., Cat Tower).
@@ -208,7 +207,7 @@ export function GameProvider({ children }) {
       availableGardening,
       availableCatAccessories,
       availableHomes,
-      // Expose setters for accessory inventory (needed in CatEditor)
+      // Expose setter for accessory inventory (needed in CatEditor)
       setCatAccessoriesInventory,
     }}>
       {children}

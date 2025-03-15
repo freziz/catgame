@@ -1,14 +1,27 @@
 // app/garden.tsx
 import React, { useContext } from 'react';
-import { View, Text, Animated, ScrollView, TouchableOpacity, StyleSheet, Dimensions, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+  Alert,
+} from 'react-native';
 import { GameContext } from './GameContext';
-import DraggableGardenItem from '../components/DraggableGardenItem';
+import DraggableItem from '../components/DraggableItem';
 
 const { width, height } = Dimensions.get('window');
 
 export default function GardenDecoration() {
-  // Retrieve garden-related state from context.
-  const { gardeningInventory, gardenDecorations, addGardenDecoration, availableGardening } = useContext(GameContext);
+  const {
+    gardeningInventory,
+    gardenDecorations,
+    addGardenDecoration,
+    availableGardening,
+    updateGardenItemPosition, // Make sure this exists in your GameContext
+  } = useContext(GameContext);
 
   // Count placed garden items.
   const placedCount = gardenDecorations.reduce((acc, item) => {
@@ -19,14 +32,19 @@ export default function GardenDecoration() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Garden Decoration</Text>
-      {/* The garden area container must be relative */}
+      {/* Garden area container with relative positioning */}
       <View style={styles.gardenArea}>
         {gardenDecorations.map((item) => (
-          <DraggableGardenItem
+          <DraggableItem
             key={item.id}
             item={item}
-            onDragEnd={(newPos) => {
+            imageSource={item.image}
+            onUpdate={(newPos) => {
               console.log('New garden item position', item.id, newPos);
+              // If you have an update function in context, call it here:
+              if (updateGardenItemPosition) {
+                updateGardenItemPosition(item.id, newPos);
+              }
             }}
           />
         ))}
@@ -54,7 +72,10 @@ export default function GardenDecoration() {
                     };
                     addGardenDecoration(newItem);
                   } else {
-                    Alert.alert("No More Items", `You have no more ${name} available.`);
+                    Alert.alert(
+                      "No More Items",
+                      `You have no more ${name} available.`
+                    );
                   }
                 }}
               >
@@ -71,7 +92,7 @@ export default function GardenDecoration() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   title: { fontSize: 24, textAlign: 'center', marginVertical: 10 },
-  // The gardenArea container must be relative
+  // Garden area container must be relative so that the draggable items position absolutely
   gardenArea: {
     position: 'relative',
     width: width,
