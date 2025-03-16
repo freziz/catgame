@@ -30,7 +30,7 @@ export default function NavBar() {
       <TouchableOpacity onPress={() => navigateTo('/garden')}>
         <Text style={styles.navItem}>Garden</Text>
       </TouchableOpacity>
-      <TouchableOpacity onPress={() => navigateTo('/(tabs)/cats')}>
+      <TouchableOpacity onPress={() => navigateTo('/CatInteractionScreen')}>
         <Text style={styles.navItem}>Cats</Text>
       </TouchableOpacity>
     </View>

@@ -17,7 +17,6 @@ export default function RootLayout() {
             <Stack>
               <Stack.Screen name="HomeScreen" options={{ headerShown: false }} />
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="CatDetail" options={{ title: 'Cat Detail' }} />
             </Stack>
           </View>
         </GameProvider>

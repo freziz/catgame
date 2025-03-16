@@ -1,26 +1,35 @@
 // app/garden.tsx (GardenDecoration)
 import React, { useContext, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Button } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { GameContext } from './context/GameContext';
 import GardenGrid from '../components/GardenGrid'; // Import the grid layout
 
 export default function GardenDecoration() {
-  const { availableGardening, gardeningInventory, selectGardenItem, selectedGardenItem } = useContext(GameContext);
-  const [sidebarVisible, setSidebarVisible] = useState(true);
+  const { availableGardening, gardeningInventory, selectGardenItem, selectedGardenItem, purchasedGarden } = useContext(GameContext);
+  const [sidebarVisible, setSidebarVisible] = useState(false);
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Garden Decoration</Text>
       
-      {/* Display Garden Grid for placement */}
-      <GardenGrid />
-
-      {/* Toggle Sidebar */}
-      <Button
-        title={sidebarVisible ? 'Hide Sidebar' : 'Show Sidebar'}
+      {purchasedGarden ? (
+        <GardenGrid />
+      ) : (
+        <Text style={styles.emptyMessage}>
+          No garden purchased. Please buy a garden first.
+        </Text>
+      )}
+      
+      {/* Toggle Sidebar using TouchableOpacity for styling */}
+      <TouchableOpacity
+        style={styles.toggleSidebar}
         onPress={() => setSidebarVisible(!sidebarVisible)}
-      />
-
+      >
+        <Text style={styles.toggleSidebarText}>
+          {sidebarVisible ? 'Hide Sidebar' : 'Show Sidebar'}
+        </Text>
+      </TouchableOpacity>
+      
       {/* Gardening Inventory Sidebar */}
       {sidebarVisible && (
         <View style={styles.sidebar}>
@@ -51,6 +60,14 @@ export default function GardenDecoration() {
 const styles = StyleSheet.create({
   container: { flex: 1, alignItems: "center", padding: 20 },
   title: { fontSize: 28, textAlign: "center", marginVertical: 10 },
+  emptyMessage: { fontSize: 16, color: "#555", marginVertical: 20 },
+  toggleSidebar: {
+    padding: 10,
+    backgroundColor: "#ddd",
+    borderRadius: 5,
+    marginVertical: 10,
+  },
+  toggleSidebar: { padding: 10, alignItems: "center", backgroundColor: "#ddd", marginBottom: 10 },
   sidebar: {
     position: "absolute",
     right: 10,

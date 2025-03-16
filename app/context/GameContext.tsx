@@ -1,11 +1,10 @@
-// context/GameContext.tsx
+// context/GameContext.tsx 
 import React, { createContext, useState, useEffect } from 'react';
 
 export const GameContext = createContext(null);
 
 // ---------------- Configuration Objects ---------------- //
 
-// Passive buildings provide passive income.
 const availableBuildings = { 
   "Tanbark 🍂": { cost: 50, income: 1 },
   "Tiny Ball 🔴": { cost: 250, income: 2 },
@@ -15,7 +14,6 @@ const availableBuildings = {
   "Fern's Bird 🦜": { cost: 175000000, income: 1 },
 };
 
-// Furniture items for decorating the home.
 const availableFurniture = {
   "Chair 🪑": { cost: 25000, image: require('../../assets/sofa.png') },
   "Table 🍽️": { cost: 75000, image: require('../../assets/table.png') },
@@ -23,20 +21,16 @@ const availableFurniture = {
   "Bed 🛌": { cost: 350000, image: require('../../assets/table.png') }
 };
 
-// Gardening items.
 const availableGardening = { 
   "Garden Chair 💺": { cost: 35000, image: require('../../assets/bench.png') },
   "Fountain ⛲": { cost: 1000000, image: require('../../assets/fountain.png') }, 
 };
 
-// Cat accessories.
 const availableCatAccessories = { 
   "Hat 🎩": { cost: 50, image: require('../../assets/hat.png') }, 
   "Bowtie 🎀": { cost: 30, image: require('../../assets/bowtie.png') } 
 };
 
-// Homes available for purchase.
-// Each home has a gridSize property (for home furniture layout).
 const availableHomes = { 
   "Shack 🏚️": { cost: 1000000, floorPlan: require('../../assets/small_house.png'), gridSize: 3 }, 
   "Regular House 🏠": { cost: 100000000, floorPlan: require('../../assets/large_house.png'), gridSize: 4 },
@@ -44,7 +38,14 @@ const availableHomes = {
   "Castle 🏰": { cost: 1000000000, floorPlan: require('../../assets/large_house.png'), gridSize: 6 },
 };
 
+const availableGardenSizes = {
+  "Small Garden": { cost: 500000, gridSize: 3, floorPlan: require('../../assets/small_garden.png') },
+  "Medium Garden": { cost: 2000000, gridSize: 4, floorPlan: require('../../assets/medium_garden.png') },
+  "Large Garden": { cost: 5000000, gridSize: 5, floorPlan: require('../../assets/large_garden.png') },
+};
+
 const POINTS_PER_CAT = 150;
+const MAX_CATS = 4; // maximum number of cats that can be unlocked
 
 // ---------------- GameProvider Component ---------------- //
 
@@ -53,6 +54,7 @@ export function GameProvider({ children }) {
   const [points, setPoints] = useState(1000000000);
   const [totalPointsEarned, setTotalPointsEarned] = useState(0);
   const [clicks, setClicks] = useState(0);
+  // Instead of auto-adding cats, start with an empty list
   const [cats, setCats] = useState([]);
   const [passiveBuildings, setPassiveBuildings] = useState({});
 
@@ -63,6 +65,7 @@ export function GameProvider({ children }) {
 
   // Real estate and decoration state
   const [purchasedHome, setPurchasedHome] = useState(null);
+  const [purchasedGarden, setPurchasedGarden] = useState(null);
   const [homeDecorations, setHomeDecorations] = useState([]);
   const [gardenDecorations, setGardenDecorations] = useState([]);
 
@@ -80,27 +83,30 @@ export function GameProvider({ children }) {
     return () => clearInterval(interval);
   }, [passiveBuildings]);
 
+  // Adjust addPoints so that points never drop below 0.
   const addPoints = (amount) => {
-    setPoints(prev => prev + amount);
-    setTotalPointsEarned(prev => {
-      const newTotal = prev + amount;
-      const expectedCats = Math.floor(newTotal / POINTS_PER_CAT);
-      if (expectedCats > cats.length) {
-        setCats(prevCats => {
-          const newCats = [...prevCats];
-          while (newCats.length < expectedCats) {
-            newCats.push({ id: newCats.length, customization: {} });
-          }
-          return newCats;
-        });
-      }
-      return newTotal;
-    });
+    setPoints(prev => Math.max(prev + amount, 0));
+    setTotalPointsEarned(prev => prev + amount);
   };
 
   const handleClick = () => {
     setClicks(prev => prev + 1);
-    addPoints(1);
+    addPoints(100000);
+  };
+
+  // ---------------- Cat Unlocking ---------------- //
+  // Instead of auto-unlocking, provide a function to unlock a cat when the threshold is met.
+  const unlockCat = () => {
+    if (cats.length >= MAX_CATS) {
+      alert("All cats are already unlocked.");
+      return;
+    }
+    const requiredPoints = POINTS_PER_CAT * (cats.length + 1);
+    if (totalPointsEarned >= requiredPoints) {
+      setCats(prev => [...prev, { id: prev.length, customization: {} }]);
+    } else {
+      alert("Not enough points to unlock this cat.");
+    }
   };
 
   // ---------------- Building & Shop Functions ---------------- //
@@ -168,7 +174,6 @@ export function GameProvider({ children }) {
     return false;
   };
 
-  // Upgrade home: refund all furniture on grid and set new home.
   const upgradeHome = (newHomeType) => {
     const newHome = availableHomes[newHomeType];
     if (!newHome) return false;
@@ -185,25 +190,60 @@ export function GameProvider({ children }) {
       alert("Not enough points for the upgrade.");
       return false;
     }
-    // Deduct full cost (or only the difference, if you prefer)
     setPoints(prev => prev - newHome.cost);
-    // Return all placed furniture to inventory.
+    // Refund all placed home furniture.
     homeDecorations.forEach(decoration => {
       setFurnitureInventory(prev => ({
         ...prev,
         [decoration.name]: (prev[decoration.name] || 0) + 1,
       }));
     });
-    // Clear home decorations.
     setHomeDecorations([]);
-    // Upgrade home.
     setPurchasedHome({ type: newHomeType, floorPlan: newHome.floorPlan, gridSize: newHome.gridSize, decorations: [] });
     alert("Upgraded to " + newHomeType);
     return true;
   };
 
-  const addHomeDecoration = (item) => {
-    setHomeDecorations(prev => [...prev, item]);
+  // Garden purchasing/upgrading functions.
+  const buyGarden = (gardenType) => {
+    const garden = availableGardenSizes[gardenType];
+    if (!garden) return false;
+    if (points >= garden.cost) {
+      setPoints(prev => prev - garden.cost);
+      setPurchasedGarden({ type: gardenType, floorPlan: garden.floorPlan, gridSize: garden.gridSize, decorations: [] });
+      return true;
+    }
+    return false;
+  };
+
+  const upgradeGarden = (newGardenType) => {
+    const newGarden = availableGardenSizes[newGardenType];
+    if (!newGarden) return false;
+    if (!purchasedGarden) {
+      alert("You haven't purchased a garden yet.");
+      return false;
+    }
+    const currentGarden = availableGardenSizes[purchasedGarden.type];
+    if (newGarden.cost <= currentGarden.cost) {
+      alert("This garden is not an upgrade.");
+      return false;
+    }
+    if (points < newGarden.cost) {
+      alert("Not enough points for the upgrade.");
+      return false;
+    }
+    setPoints(prev => prev - newGarden.cost);
+    // Refund all placed garden items.
+    gardenDecorations.forEach(decoration => {
+      setGardeningInventory(prev => ({
+        ...prev,
+        [decoration.name]: (prev[decoration.name] || 0) + 1,
+      }));
+    });
+    setGardenDecorations([]);
+    setPurchasedGarden({ type: newGardenType, floorPlan: newGarden.floorPlan, gridSize: newGarden.gridSize, decorations: [] });
+    alert("Garden upgraded to " + newGardenType);
+    return true;
   };
 
   // ---------------- Home Grid Management ---------------- //
@@ -298,9 +338,9 @@ export function GameProvider({ children }) {
     setGardenDecorations(prev => {
       const itemToRemove = prev.find(item => item.id === id);
       if (!itemToRemove) return prev;
-      setGardeningInventory(inv => ({
-        ...inv,
-        [itemToRemove.name]: (inv[itemToRemove.name] || 0) + 1,
+      setGardeningInventory(prev => ({
+        ...prev,
+        [itemToRemove.name]: (prev[itemToRemove.name] || 0) + 1,
       }));
       return prev.filter(item => item.id !== id);
     });
@@ -316,8 +356,9 @@ export function GameProvider({ children }) {
 
   return (
     <GameContext.Provider value={{
-      // Basic game state
+      // Basic game state (including setPoints for use in other screens)
       points,
+      setPoints,
       totalPointsEarned,
       clicks,
       cats,
@@ -326,6 +367,7 @@ export function GameProvider({ children }) {
       gardeningInventory,
       catAccessoriesInventory,
       purchasedHome,
+      purchasedGarden,
       homeDecorations,
       gardenDecorations,
       // Basic functions
@@ -335,7 +377,9 @@ export function GameProvider({ children }) {
       buyShopItem,
       buyHome,
       upgradeHome,
-      addHomeDecoration,
+      buyGarden,
+      upgradeGarden,
+      unlockCat,  // new function for unlocking cats
       // Home grid management
       selectedFurniture,
       selectFurniture,
@@ -355,7 +399,7 @@ export function GameProvider({ children }) {
       availableGardening,
       availableCatAccessories,
       availableHomes,
-      setCatAccessoriesInventory,
+      availableGardenSizes,
     }}>
       {children}
     </GameContext.Provider>
