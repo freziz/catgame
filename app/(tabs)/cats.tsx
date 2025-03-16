@@ -2,7 +2,7 @@
 import React, { useContext } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
 import { useRouter } from 'expo-router';
-import { GameContext } from '../GameContext';
+import { GameContext } from '../context/GameContext';
 
 export default function CatsScreen() {
   const { cats } = useContext(GameContext);

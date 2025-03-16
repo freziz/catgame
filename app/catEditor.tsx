@@ -2,7 +2,7 @@
 import React, { useContext, useState } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { GameContext } from './GameContext';
+import { GameProvider } from './context/GameContext';
 import DraggableItem from '../components/DraggableItem';
 
 export default function CatEditor() {

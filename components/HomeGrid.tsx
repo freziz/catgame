@@ -1,6 +1,6 @@
 import React, { useContext } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
-import { GameContext } from "../app/GameContext";
+import { GameContext } from "../app/context/GameContext";
 
 export default function HomeGrid() {
   const { homeDecorations, placeFurniture, rotateFurniture, removeFurniture, selectedFurniture, purchasedHome } = useContext(GameContext);

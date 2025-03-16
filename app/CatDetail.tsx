@@ -10,7 +10,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { GameContext } from './GameContext';
+import { GameProvider } from './context/GameContext';
 import DraggableItem from '../components/DraggableItem';
 
 export default function CatDetail() {

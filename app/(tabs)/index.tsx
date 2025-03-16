@@ -1,6 +1,6 @@
 import React, { useContext, useState, useEffect, useRef, useCallback } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Button,ImageBackground  } from "react-native";
-import { GameContext } from "../GameContext";
+import { GameContext } from '../context/GameContext';
 import FallingFoodManager, { FallingFoodManagerHandle } from "../../components/FallingFoodManager";
 import FloatingCatFood from "../../components/FloatingCatFood"; // Import floating food effect
 

@@ -1,128 +1,115 @@
-// app/components/DraggableItem.tsx (modified resize part)
-import React, { useRef, useState } from 'react';
+// app/components/DraggableItem.tsx
+import React from "react";
+import { Image, StyleSheet } from "react-native";
+import Animated, {
+  useSharedValue,
+  useAnimatedGestureHandler,
+  useAnimatedStyle,
+  runOnJS,
+} from "react-native-reanimated";
 import {
-  Animated,
-  PanResponder,
-  TouchableOpacity,
-  Image,
-  StyleSheet,
-  Text,
-} from 'react-native';
+  PanGestureHandler,
+  PinchGestureHandler,
+  RotationGestureHandler,
+  GestureHandlerRootView,
+} from "react-native-gesture-handler";
 
-interface DraggableItemProps {
-  item: {
-    x: number;
-    y: number;
-    rotation?: number;
-    size?: number;
+export default function DraggableItem({ item, imageSource, gardenBounds, onUpdate }) {
+  // Shared values for movement, scaling, and rotation
+  const translateX = useSharedValue(item.x || 0);
+  const translateY = useSharedValue(item.y || 0);
+  const scale = useSharedValue(item.scale || 1);
+  const rotation = useSharedValue(item.rotation || 0);
+
+  // Function to keep objects inside garden
+  const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+  // Function to safely update position
+  const onDragEnd = () => {
+    if (onUpdate && typeof onUpdate === "function") {
+      try {
+        runOnJS(onUpdate)({
+          x: translateX.value,
+          y: translateY.value,
+          scale: scale.value,
+          rotation: rotation.value,
+        });
+      } catch (error) {
+        console.error("Error updating item position:", error);
+      }
+    }
   };
-  imageSource: any;
-  onUpdate: (newProps: { x: number; y: number; rotation: number; size: number }) => void;
-}
 
-export default function DraggableItem({ item, imageSource, onUpdate }: DraggableItemProps) {
-  const initialSize = item.size ?? 50;
-  const pan = useRef(new Animated.ValueXY({ x: item.x, y: item.y })).current;
-  const [rotation, setRotation] = useState(item.rotation || 0);
-  const [size, setSize] = useState(initialSize);
-  const [controlsVisible, setControlsVisible] = useState(false);
-  const THRESHOLD = 10;
+  // Gesture handlers
+  const panHandler = useAnimatedGestureHandler({
+    onStart: (_, ctx) => {
+      ctx.startX = translateX.value;
+      ctx.startY = translateY.value;
+    },
+    onActive: (event, ctx) => {
+      // Clamp values to stay inside the garden
+      translateX.value = clamp(ctx.startX + event.translationX, gardenBounds.left, gardenBounds.right);
+      translateY.value = clamp(ctx.startY + event.translationY, gardenBounds.top, gardenBounds.bottom);
+    },
+    onEnd: () => runOnJS(onDragEnd)(),
+  });
 
-  const dragResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onPanResponderGrant: (evt, gestureState) => {
-        // Hide controls when dragging starts.
-        setControlsVisible(false);
-        pan.setOffset({ x: pan.x._value, y: pan.y._value });
-        pan.setValue({ x: 0, y: 0 });
-      },
-      onPanResponderMove: Animated.event([null, { dx: pan.x, dy: pan.y }], { useNativeDriver: false }),
-      onPanResponderRelease: (evt, gestureState) => {
-        pan.flattenOffset();
-        if (Math.abs(gestureState.dx) < THRESHOLD && Math.abs(gestureState.dy) < THRESHOLD) {
-          // Minimal movement: toggle controls.
-          setControlsVisible(prev => !prev);
-        } else {
-          onUpdate({ x: pan.x._value, y: pan.y._value, rotation, size });
-        }
-      },
-    })
-  ).current;
+  const pinchHandler = useAnimatedGestureHandler({
+    onStart: (_, ctx) => {
+      ctx.startScale = scale.value;
+    },
+    onActive: (event, ctx) => {
+      scale.value = Math.max(0.5, Math.min(3, ctx.startScale * event.scale)); // Prevent too small/large scaling
+    },
+    onEnd: () => runOnJS(onDragEnd)(),
+  });
 
-  const resizeResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onPanResponderMove: (evt, gestureState) => {
-        // Preserve aspect ratio: adjust size uniformly.
-        const newSize = Math.max(20, size + gestureState.dx);
-        setSize(newSize);
-      },
-      onPanResponderRelease: () => {
-        onUpdate({ x: pan.x._value, y: pan.y._value, rotation, size });
-      },
-    })
-  ).current;
+  const rotationHandler = useAnimatedGestureHandler({
+    onStart: (_, ctx) => {
+      ctx.startRotation = rotation.value;
+    },
+    onActive: (event, ctx) => {
+      rotation.value = ctx.startRotation + event.rotation;
+    },
+    onEnd: () => runOnJS(onDragEnd)(),
+  });
 
-  const handleRotate = () => {
-    const newRotation = (rotation + 90) % 360;
-    setRotation(newRotation);
-    onUpdate({ x: pan.x._value, y: pan.y._value, rotation: newRotation, size });
-  };
+  // Animated styles for transformations
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: translateX.value },
+      { translateY: translateY.value },
+      { rotate: `${rotation.value}rad` },
+      { scale: scale.value },
+    ],
+  }));
 
   return (
-    <Animated.View
-      style={[
-        styles.container,
-        {
-          width: size,
-          height: size,
-          transform: [
-            { translateX: pan.x },
-            { translateY: pan.y },
-            { rotate: `${rotation}deg` },
-          ],
-        },
-      ]}
-      {...dragResponder.panHandlers}
-    >
-      <Image source={imageSource} style={{ width: size, height: size, resizeMode: 'contain' }} />
-      {controlsVisible && (
-        <>
-          <TouchableOpacity style={styles.rotateButton} onPress={handleRotate}>
-            <Text style={styles.controlText}>↻</Text>
-          </TouchableOpacity>
-          <Animated.View style={styles.resizeHandle} {...resizeResponder.panHandlers}>
-            <Text style={styles.controlText}>⇲</Text>
-          </Animated.View>
-        </>
-      )}
-    </Animated.View>
+    <GestureHandlerRootView>
+      <PanGestureHandler onGestureEvent={panHandler}>
+        <Animated.View style={[styles.container, animatedStyle]}>
+          <RotationGestureHandler onGestureEvent={rotationHandler}>
+            <Animated.View>
+              <PinchGestureHandler onGestureEvent={pinchHandler}>
+                <Animated.View>
+                  <Image source={imageSource} style={styles.image} />
+                </Animated.View>
+              </PinchGestureHandler>
+            </Animated.View>
+          </RotationGestureHandler>
+        </Animated.View>
+      </PanGestureHandler>
+    </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    position: 'absolute',
+    position: "absolute",
   },
-  rotateButton: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    padding: 4,
-    borderRadius: 10,
-  },
-  resizeHandle: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    padding: 4,
-    borderTopLeftRadius: 10,
-  },
-  controlText: {
-    color: '#fff',
-    fontSize: 14,
+  image: {
+    width: 100,
+    height: 100,
+    resizeMode: "contain",
   },
 });

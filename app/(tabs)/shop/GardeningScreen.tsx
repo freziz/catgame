@@ -1,7 +1,7 @@
 // app/(tabs)/shop/GardeningScreen.tsx
 import React, { useContext } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import { GameContext } from '../../GameContext';
+import { GameContext } from '../../context/GameContext';
 
 export default function GardeningScreen() {
   const { points, buyShopItem, gardeningInventory, availableGardening } = useContext(GameContext);

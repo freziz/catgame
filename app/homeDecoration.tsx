@@ -1,6 +1,6 @@
 import React, { useContext, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
-import { GameContext } from "./GameContext";
+import { GameContext } from "./context/GameContext";
 import HomeGrid from "../components/HomeGrid"; // Import the grid layout
 
 export default function HomeDecoration() {

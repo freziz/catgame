@@ -1,7 +1,7 @@
 // app/(tabs)/shop/CatClothesScreen.tsx
 import React, { useContext } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import { GameContext } from '../../GameContext';
+import { GameContext } from '../../context/GameContext';
 
 export default function CatClothesScreen() {
   const { points, buyShopItem, catAccessoriesInventory, availableCatAccessories } = useContext(GameContext);

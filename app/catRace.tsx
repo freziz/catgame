@@ -1,7 +1,7 @@
 // app/(tabs)/catRace.tsx
 import React, { useContext, useEffect, useRef, useState } from 'react';
 import { View, Text, Animated, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
-import { GameContext } from './GameContext';
+import { GameContext } from './context/GameContext';
 
 const { width } = Dimensions.get('window');
 

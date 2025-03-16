@@ -1,7 +1,7 @@
 // app/(tabs)/realestate.tsx
 import React, { useContext } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
-import { GameContext } from '../GameContext';
+import { GameContext } from '../context/GameContext';
 
 export default function RealEstateScreen() {
   const { points, purchasedHome, availableHomes, buyHome, upgradeHome } = useContext(GameContext);
