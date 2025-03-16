@@ -8,38 +8,46 @@ export const GameContext = createContext(null);
 
 // Passive buildings (e.g., "Cat Tower") provide passive income.
 const availableBuildings = { 
-  "Cat Tower": { cost: 50, income: 1 }
+  "Tanbark 🍂": { cost: 50, income: 1 },
+  "Tiny Ball 🔴": { cost: 250, income: 2 },
+  "Football 🏈": { cost: 2500, income: 1 },
+  "Teddy Bear 🧸": { cost: 50000, income: 1 },
+  "Stuffed Snowman ⛄": { cost: 2000000, income: 1 },
+  "Fern's Bird 🦜": { cost: 175000000, income: 1 },
 };
 
 // Furniture items for decorating the purchased home.
-const availableFurniture = { 
-  "Sofa": { cost: 100, image: require('../assets/sofa.png') }, 
-  "Table": { cost: 150, image: require('../assets/table.png') } 
-};
-
+const availableFurniture = {
+  "Chair 🪑": { cost: 25000, image: require('../assets/sofa.png') },
+  "Table 🍽️": { cost: 75000, image: require('../assets/table.png') },
+  "Sofa 🛋️": { cost: 150000, image: require('../assets/sofa.png') },
+  "Bed 🛌": { cost: 350000, image: require('../assets/table.png') }
+}
 // Gardening items for decorating the garden.
 const availableGardening = { 
-  "Fountain": { cost: 150, image: require('../assets/fountain.png') }, 
-  "Bench": { cost: 80, image: require('../assets/bench.png') },
+  "Garden Chair 💺": { cost: 35000, image: require('../assets/bench.png') },
+  "Fountain ⛲": { cost: 1000000, image: require('../assets/fountain.png') }, 
 };
 
 // Cat accessories for customizing cats.
 const availableCatAccessories = { 
-  "Hat": { cost: 50, image: require('../assets/hat.png') }, 
-  "Bowtie": { cost: 30, image: require('../assets/bowtie.png') } 
+  "Hat 🎩": { cost: 50, image: require('../assets/hat.png') }, 
+  "Bowtie 🎀": { cost: 30, image: require('../assets/bowtie.png') } 
 };
 
 // Real estate: Homes available for purchase.
 const availableHomes = { 
-  "Small House": { cost: 1000, floorPlan: require('../assets/small_house.png') }, 
-  "Large House": { cost: 3000, floorPlan: require('../assets/large_house.png') } 
+  "Shack 🏚️": { cost: 1000000, floorPlan: require('../assets/small_house.png') }, 
+  "Regular House 🏠": { cost: 100000000, floorPlan: require('../assets/large_house.png') },
+  "Garden House 🏡": { cost: 500000000, floorPlan: require('../assets/large_house.png') },
+  "Castle 🏰": { cost: 1000000000, floorPlan: require('../assets/large_house.png') },
 };
 
-const POINTS_PER_CAT = 5; // 1 cat per 5 cumulative points
+const POINTS_PER_CAT = 150; // 1 cat per 5 cumulative points
 
 export function GameProvider({ children }) {
   // Points that the player currently has (spendable).
-  const [points, setPoints] = useState(0);
+  const [points, setPoints] = useState(1000000000);
   // Total points ever earned (cumulative, used for determining cats).
   const [totalPointsEarned, setTotalPointsEarned] = useState(0);
   const [clicks, setClicks] = useState(0);
@@ -96,7 +104,7 @@ export function GameProvider({ children }) {
   // handleClick: invoked on each click; adds 50 points.
   const handleClick = () => {
     setClicks(prev => prev + 1);
-    addPoints(50);
+    addPoints(1);
   };
 
   // buyBuilding: purchases a passive building (e.g., Cat Tower).

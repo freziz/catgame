@@ -1,0 +1,116 @@
+import React, { useContext, useState, useEffect, useRef, useCallback } from "react";
+import { View, Text, TouchableOpacity, StyleSheet, Button, ImageBackground, Dimensions } from "react-native";
+import { GameContext } from "../GameContext";
+import FallingFoodManager, { FallingFoodManagerHandle } from "../../components/FallingFoodManager";
+import FloatingCatFood from "../../components/FloatingCatFood"; // Import floating food effect
+
+const { width, height } = Dimensions.get("window"); // Get full screen size
+
+const SPAWN_THRESHOLD = 500; // one falling food per 500 points
+
+export default function ClickerScreen() {
+  const { points, handleClick, passiveBuildings } = useContext(GameContext);
+  const [sidebarVisible, setSidebarVisible] = useState(true);
+  const [prevSpawnPoints, setPrevSpawnPoints] = useState(points);
+  const passiveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const foodManagerRef = useRef<FallingFoodManagerHandle>(null);
+  const [catFood, setCatFood] = useState([]); // Track floating cat food
+
+  // Handle Click: Add points + spawn floating cat food
+  const onClick = useCallback(() => {
+    handleClick();
+    spawnCatFood(); // Show floating cat food effect
+  }, [handleClick]);
+
+  // Fix: Only allow ONE cat food to appear per click
+  const spawnCatFood = () => {
+    if (catFood.length >= 1) return; // Prevent multiple spawns
+
+    const id = Date.now();
+    setCatFood([id]); // Ensure only one appears
+
+    setTimeout(() => {
+      setCatFood([]); // Remove after animation
+    }, 1000);
+  };
+
+  return (
+    <ImageBackground 
+      source={require("../../assets/playground.avif")} // Ensure image is in assets
+      style={styles.background} 
+      resizeMode="cover" // Ensures full coverage
+    >
+      <View style={styles.overlay}>
+        <View style={styles.container}>
+          <Text style={styles.counter}>Points: {points}</Text>
+          <TouchableOpacity style={styles.clickButton} onPress={onClick}>
+            <Text style={styles.clickText}>Get Cat Food</Text>
+          </TouchableOpacity>
+          <Button
+            title={sidebarVisible ? "Hide Sidebar" : "Show Sidebar"}
+            onPress={() => setSidebarVisible(!sidebarVisible)}
+          />
+          {sidebarVisible && (
+            <View style={styles.sidebar}>
+              <Text style={styles.sidebarTitle}>Cat Items</Text>
+              {Object.entries(passiveBuildings).map(([name, count]) => (
+                <Text key={name}>
+                  {name}: {count}
+                </Text>
+              ))}
+            </View>
+          )}
+        </View>
+
+        {/* Render the falling food manager */}
+        <FallingFoodManager ref={foodManagerRef} maxFoods={25} />
+
+        {/* Render floating cat food effect (only one at a time) */}
+        {catFood.map((id) => (
+          <FloatingCatFood key={id} onComplete={() => setCatFood([])} />
+        ))}
+      </View>
+    </ImageBackground>
+  );
+}
+
+const styles = StyleSheet.create({
+  background: {
+    flex: 1, // Ensures full-screen coverage
+    width: width, // Ensures full width
+    height: height, // Ensures full height
+    position: "absolute", // Keeps it fixed as a background
+  },
+  overlay: {
+    flex: 1,
+    width: "100%",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  container: {
+    flex: 1, 
+    padding: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    width: "100%", // Ensures it expands
+    height: "100%", // Full height
+  },
+  counter: { fontSize: 24, marginVertical: 10, color: "#fff" }, // Make text readable
+  clickButton: {
+    backgroundColor: "orange",
+    padding: 20,
+    borderRadius: 10,
+    margin: 50,
+  },
+  clickText: { fontSize: 20, color: "#fff" },
+  sidebar: {
+    position: "absolute",
+    right: 10,
+    top: 50,
+    backgroundColor: "rgba(255, 255, 255, 0.8)", // Semi-transparent
+    padding: 10,
+    borderRadius: 5,
+  },
+  sidebarTitle: { fontWeight: "bold", marginBottom: 5 },
+});

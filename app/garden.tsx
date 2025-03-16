@@ -1,5 +1,5 @@
 // app/garden.tsx
-import React, { useContext } from 'react';
+import React, { useContext, useState } from 'react'; // CHANGED: added useState import
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Dimensions,
   Alert,
+  Button,
 } from 'react-native';
 import { GameContext } from './GameContext';
 import DraggableItem from '../components/DraggableItem';
@@ -27,7 +28,10 @@ export default function GardenDecoration() {
   const placedCount = gardenDecorations.reduce((acc, item) => {
     acc[item.name] = (acc[item.name] || 0) + 1;
     return acc;
-  }, {});
+  }, {} as Record<string, number>);
+
+  // CHANGED: Add state to toggle sidebar visibility.
+  const [sidebarVisible, setSidebarVisible] = useState(true);
 
   return (
     <View style={styles.container}>
@@ -49,42 +53,52 @@ export default function GardenDecoration() {
           />
         ))}
       </View>
-      <View style={styles.sidePanel}>
-        <Text style={styles.panelTitle}>Gardening Inventory</Text>
-        <ScrollView>
-          {Object.entries(availableGardening).map(([name, data]) => {
-            const inventoryCount = gardeningInventory[name] || 0;
-            const alreadyPlaced = placedCount[name] || 0;
-            const availableCount = inventoryCount - alreadyPlaced;
-            return (
-              <TouchableOpacity
-                key={name}
-                style={styles.inventoryItem}
-                onPress={() => {
-                  if (availableCount > 0) {
-                    const newItem = {
-                      id: Date.now(),
-                      name,
-                      x: 50,
-                      y: 50,
-                      rotation: 0,
-                      image: data.image,
-                    };
-                    addGardenDecoration(newItem);
-                  } else {
-                    Alert.alert(
-                      "No More Items",
-                      `You have no more ${name} available.`
-                    );
-                  }
-                }}
-              >
-                <Text>{name} (Available: {availableCount})</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
+      
+      {/* CHANGED: Add a button to toggle the sidebar */}
+      <Button
+        title={sidebarVisible ? 'Hide Sidebar' : 'Show Sidebar'} // CHANGED: Toggle button label
+        onPress={() => setSidebarVisible(!sidebarVisible)} // CHANGED: Toggle sidebar visibility
+      />
+      
+      {/* CHANGED: Conditionally render the sidebar */}
+      {sidebarVisible && (
+        <View style={styles.sidePanel}>
+          <Text style={styles.panelTitle}>Gardening Inventory</Text>
+          <ScrollView>
+            {Object.entries(availableGardening).map(([name, data]) => {
+              const inventoryCount = gardeningInventory[name] || 0;
+              const alreadyPlaced = placedCount[name] || 0;
+              const availableCount = inventoryCount - alreadyPlaced;
+              return (
+                <TouchableOpacity
+                  key={name}
+                  style={styles.inventoryItem}
+                  onPress={() => {
+                    if (availableCount > 0) {
+                      const newItem = {
+                        id: Date.now(),
+                        name,
+                        x: 50,
+                        y: 50,
+                        rotation: 0,
+                        image: data.image,
+                      };
+                      addGardenDecoration(newItem);
+                    } else {
+                      Alert.alert(
+                        "No More Items",
+                        `You have no more ${name} available.`
+                      );
+                    }
+                  }}
+                >
+                  <Text>{name} (Available: {availableCount})</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
     </View>
   );
 }

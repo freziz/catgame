@@ -16,7 +16,7 @@ export default function RealEstateScreen() {
         Object.entries(availableHomes).map(([name, data]) => (
           <View key={name} style={styles.homeContainer}>
             <Text style={styles.homeText}>
-              {name} - Cost: {data.cost} pts
+              {name} - Cost: {data.cost.toLocaleString()} pts
             </Text>
             <TouchableOpacity
               style={styles.buyButton}

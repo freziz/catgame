@@ -14,7 +14,7 @@ export default function GardeningScreen() {
         return (
           <View key={name} style={styles.itemContainer}>
             <Text style={styles.itemText}>
-              {name} - Cost: {data.cost} pts | Owned: {count}
+              {name} - Cost: {data.cost.toLocaleString()} pts | Owned: {count}
             </Text>
             <TouchableOpacity
               style={styles.buyButton}

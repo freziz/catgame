@@ -8,14 +8,14 @@ export default function BuildingsScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.points}>Your Points: {points}</Text>
-      <Text style={styles.title}>Passive Buildings</Text>
+      <Text style={styles.points}>Your Points: {points.toLocaleString()}</Text>
+      <Text style={styles.title}>Cat Items</Text>
       {Object.entries(availableBuildings).map(([name, data]) => {
         const count = passiveBuildings[name] || 0;
         return (
           <View key={name} style={styles.itemContainer}>
             <Text style={styles.itemText}>
-              {name} - Cost: {data.cost} pts | Income: {data.income} pts/sec | Owned: {count}
+              {name} - Cost: {data.cost.toLocaleString()} pts | Income: {data.income} pts/sec | Owned: {count}
             </Text>
             <TouchableOpacity
               style={styles.buyButton}
