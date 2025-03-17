@@ -1,27 +1,39 @@
-// app/components/FallingCatFood.tsx
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Dimensions, StyleSheet, Image } from 'react-native';
 
-const { width, height } = Dimensions.get('window');
-
 export default function FallingCatFood() {
   const imageSize = 50;
-  // Use state to store the random horizontal position so we can update it each loop.
-  const [randomX, setRandomX] = useState(Math.random() * (width - imageSize));
   const translateY = useRef(new Animated.Value(-imageSize)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(1)).current;
+  
+  // Get dynamic screen width & height
+  const [screenSize, setScreenSize] = useState(Dimensions.get('window'));
+
+  useEffect(() => {
+    const updateScreenSize = () => {
+      setScreenSize(Dimensions.get('window'));
+    };
+
+    // Listen for screen changes
+    const subscription = Dimensions.addEventListener('change', updateScreenSize);
+
+    return () => subscription.remove();
+  }, []);
+
+  // Generate a random X position using the updated screen width
+  const [randomX, setRandomX] = useState(Math.random() * (screenSize.width - imageSize));
 
   useEffect(() => {
     const animate = () => {
-      // Reset the animated values.
+      // Reset animation values
       translateY.setValue(-imageSize);
       rotateAnim.setValue(0);
       opacity.setValue(1);
-      
+
       Animated.parallel([
         Animated.timing(translateY, {
-          toValue: height - imageSize,
+          toValue: screenSize.height - imageSize,
           duration: 3000,
           useNativeDriver: true,
         }),
@@ -36,19 +48,19 @@ export default function FallingCatFood() {
           useNativeDriver: true,
         }),
       ]).start(() => {
-        // After the animation completes, generate a new random X for the next loop.
-        setRandomX(Math.random() * (width - imageSize));
+        // After animation completes, pick a new random X within updated width
+        setRandomX(Math.random() * (screenSize.width - imageSize));
         animate();
       });
     };
     animate();
-  }, [height, imageSize, opacity, rotateAnim, translateY]);
+  }, [screenSize.width, screenSize.height, imageSize, opacity, rotateAnim, translateY]);
 
   const spin = rotateAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg'],
   });
-  
+
   return (
     <Animated.View
       style={[

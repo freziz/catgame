@@ -1,4 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
+//import CatGridComponent from "../components/CatGrid"; // Import the grid layout
+import { GameContext } from './context/GameContext';
+
 import { 
   View, 
   Text, 
@@ -8,7 +11,6 @@ import {
   Alert, 
   Image 
 } from 'react-native';
-import { GameContext } from './context/GameContext';
 
 const UNLOCK_THRESHOLD = 100000;
 const initialStats = { level: 1 };
@@ -20,6 +22,8 @@ const lockedPortrait = require('../assets/catLocked.png'); // Locked Cat Image
 
 export default function CatAffectionGame() {
   const { points, totalPointsEarned, setPoints } = useContext(GameContext);
+  //const [sidebarVisible, setSidebarVisible] = useState(false);
+  //const { availableCatAccessories, setCatAccessoriesInventory, selectGardenItem, selectedGardenItem, purchasedGarden } = useContext(GameContext);
   
   const [catUnlocked, setCatUnlocked] = useState(false);
   const [catStats, setCatStats] = useState(initialStats);
@@ -89,6 +93,38 @@ export default function CatAffectionGame() {
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.header}>Cat Interaction</Text>
       <Text style={styles.points}>Points: {points.toLocaleString()}</Text>
+
+      {/* <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={styles.toggleSidebar}
+                onPress={() => setSidebarVisible(!sidebarVisible)}
+              >
+                <Text>{sidebarVisible ? 'Hide Sidebar' : 'Show Sidebar'}</Text>
+              </TouchableOpacity>
+            </View>
+
+            {sidebarVisible && (
+                      <View style={styles.sidebar}>
+                        <Text style={styles.sidebarTitle}>Gardening Inventory</Text>
+                        <ScrollView>
+                          {Object.entries(availableGardening).map(([name, data]) => {
+                            const inventoryCount = gardeningInventory[name] || 0;
+                            return (
+                              <TouchableOpacity
+                                key={name}
+                                style={[
+                                  styles.inventoryItem,
+                                  selectedGardenItem?.name === name && styles.selectedItem,
+                                ]}
+                                onPress={() => selectGardenItem(name, data.image)}
+                              >
+                                <Text>{name} (Owned: {inventoryCount})</Text>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </ScrollView>
+                      </View>
+                    )} */}
       
       {!catUnlocked ? (
         <View style={styles.lockedContainer}>
@@ -127,8 +163,13 @@ export default function CatAffectionGame() {
             <TouchableOpacity style={styles.actionButton} onPress={() => interactWithCat(12)}>
               <Text style={styles.buttonText}>Rest 💤</Text>
             </TouchableOpacity>
+
+            {/*<CatGridComponent />*/}
+
+            
           </View>
         </View>
+        
       )}
     </ScrollView>
   );
