@@ -68,6 +68,8 @@ export function GameProvider({ children }) {
   const [purchasedGarden, setPurchasedGarden] = useState(null);
   const [homeDecorations, setHomeDecorations] = useState([]);
   const [gardenDecorations, setGardenDecorations] = useState([]);
+  const [catAccessories, setCatAccessories] = useState([]);
+
 
   // ---------------- Passive Income System ---------------- //
   useEffect(() => {
@@ -354,56 +356,135 @@ export function GameProvider({ children }) {
 
   // ---------------- End Garden Management ---------------- //
 
-  return (
-    <GameContext.Provider value={{
-      // Basic game state (including setPoints for use in other screens)
-      points,
-      setPoints,
-      totalPointsEarned,
-      clicks,
-      cats,
-      passiveBuildings,
-      furnitureInventory,
-      gardeningInventory,
-      catAccessoriesInventory,
-      purchasedHome,
-      purchasedGarden,
-      homeDecorations,
-      gardenDecorations,
-      // Basic functions
-      addPoints,
-      handleClick,
-      buyBuilding,
-      buyShopItem,
-      buyHome,
-      upgradeHome,
-      buyGarden,
-      upgradeGarden,
-      unlockCat,  // new function for unlocking cats
-      // Home grid management
-      selectedFurniture,
-      selectFurniture,
-      placeFurniture,
-      rotateFurniture,
-      removeFurniture,
-      // Garden grid management
-      selectedGardenItem,
-      selectGardenItem,
-      placeGardenItem,
-      rotateGardenItem,
-      removeGardenItem,
-      updateGardenItemPosition,
-      // Configuration objects
-      availableBuildings,
-      availableFurniture,
-      availableGardening,
-      availableCatAccessories,
-      availableHomes,
-      availableGardenSizes,
-    }}>
-      {children}
-    </GameContext.Provider>
+// ---------------- Cat Accessory Management ---------------- //
+const [selectedCatItem, setSelectedCatItem] = useState(null);
+
+const selectCatItem = (name, image) => {
+  if (!catAccessoriesInventory[name] || catAccessoriesInventory[name] <= 0) {
+    alert(`You do not own any ${name}!`);
+    return;
+  }
+  setSelectedCatItem({ name, image, rotation: 0 });
+};
+
+const placeCatItem = (gridPosition) => {
+  if (!selectedCatItem) return;
+  setCatAccessories(prev => {
+    if (prev.some(item => item.position === gridPosition)) return prev;
+    return [...prev, {
+      id: Date.now(),
+      name: selectedCatItem.name,
+      image: selectedCatItem.image,
+      position: gridPosition,
+      rotation: selectedCatItem.rotation,
+    }];
+  });
+  setCatAccessoriesInventory(prev => ({
+    ...prev,
+    [selectedCatItem.name]: prev[selectedCatItem.name] - 1,
+  }));
+  setSelectedCatItem(null);
+};
+
+const rotateCatItem = (id) => {
+  setCatAccessories(prev =>
+    prev.map(item =>
+      item.id === id ? { ...item, rotation: (item.rotation + 90) % 360 } : item
+    )
   );
+};
+
+const removeCatItem = (id) => {
+  setCatAccessories(prev => {
+    const itemToRemove = prev.find(item => item.id === id);
+    if (!itemToRemove) return prev;
+    setCatAccessoriesInventory(prev => ({
+      ...prev,
+      [itemToRemove.name]: (prev[itemToRemove.name] || 0) + 1,
+    }));
+    return prev.filter(item => item.id !== id);
+  });
+};
+
+const updateCatItemPosition = (id, newProps) => {
+  setCatAccessories(prev =>
+    prev.map(item => (item.id === id ? { ...item, ...newProps } : item))
+  );
+};
+//end cat accessory management//
+
+return (
+  <GameContext.Provider value={{
+    // Basic game state (including setPoints for use in other screens)
+    points,
+    setPoints,
+    totalPointsEarned,
+    clicks,
+    cats,
+    passiveBuildings,
+    furnitureInventory,
+    gardeningInventory,
+    catAccessoriesInventory,
+    purchasedHome,
+    purchasedGarden,
+    homeDecorations,
+    gardenDecorations,
+    
+    // Basic functions
+    addPoints,
+    handleClick,
+    buyBuilding,
+    buyShopItem,
+    buyHome,
+    upgradeHome,
+    buyGarden,
+    upgradeGarden,
+    unlockCat,  // new function for unlocking cats
+    
+    // Home grid management
+    selectedFurniture,
+    selectFurniture,
+    placeFurniture,
+    rotateFurniture,
+    removeFurniture,
+    
+    // Garden grid management
+    selectedGardenItem,
+    selectGardenItem,
+    placeGardenItem,
+    rotateGardenItem,
+    removeGardenItem,
+    updateGardenItemPosition,
+
+    // 🐱 **Cat Accessories Management (MISSING BEFORE)** 🐱
+    selectedCatItem,
+    selectCatItem,
+    placeCatItem,
+    rotateCatItem,
+    removeCatItem,
+    updateCatItemPosition, 
+
+    //more
+    catAccessories,
+    setCatAccessories,
+    selectedCatItem,
+    selectCatItem,
+    placeCatItem,
+    rotateCatItem,  
+    removeCatItem,
+    updateCatItemPosition,
+
+    // Configuration objects
+    availableBuildings,
+    availableFurniture,
+    availableGardening,
+    availableCatAccessories,
+    availableHomes,
+    availableGardenSizes,
+  }}>
+    {children}
+  </GameContext.Provider>
+);
 }
 
 export { GameContext, GameProvider };

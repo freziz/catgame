@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-//import CatGridComponent from "../components/CatGrid"; // Import the grid layout
+import CatGridComponent from "../components/CatGrid"; // Import the grid layout
 import { GameContext } from './context/GameContext';
 
 import { 
@@ -21,14 +21,21 @@ const catSad = require('../assets/cat2.png');       // Sad Cat (Affection < 30)
 const lockedPortrait = require('../assets/catLocked.png'); // Locked Cat Image
 
 export default function CatAffectionGame() {
-  const { points, totalPointsEarned, setPoints } = useContext(GameContext);
-  //const [sidebarVisible, setSidebarVisible] = useState(false);
-  //const { availableCatAccessories, setCatAccessoriesInventory, selectGardenItem, selectedGardenItem, purchasedGarden } = useContext(GameContext);
-  
+  const { 
+    points, 
+    totalPointsEarned, 
+    setPoints, 
+    availableCatAccessories, 
+    selectCatItem, 
+    selectedCatItem, 
+    catAccessoriesInventory 
+  } = useContext(GameContext);
+
+  const [sidebarVisible, setSidebarVisible] = useState(false);
   const [catUnlocked, setCatUnlocked] = useState(false);
   const [catStats, setCatStats] = useState(initialStats);
-  const [affection, setAffection] = useState(30); // Starts at 30
-  const [experience, setExperience] = useState(0); // Tracks experience for leveling
+  const [affection, setAffection] = useState(30);
+  const [experience, setExperience] = useState(0);
 
   // Unlock the cat when totalPointsEarned reaches the threshold.
   useEffect(() => {
@@ -38,51 +45,44 @@ export default function CatAffectionGame() {
     }
   }, [totalPointsEarned, catUnlocked]);
 
-  // 🌟 Affection decreases over time (FASTER DECAY for more challenge)
   useEffect(() => {
     if (!catUnlocked) return;
     const timer = setInterval(() => {
-      setAffection(prev => Math.max(prev - 2, 0)); // Decrease Affection by 2 per second
+      setAffection(prev => Math.max(prev - 2, 0));
     }, 1000);
     return () => clearInterval(timer);
   }, [catUnlocked]);
 
-  // 🌟 Function to handle rewards (Prevents skipped alerts)
   const handleAffectionReward = () => {
     Alert.alert("Your cat loves you! ❤️", "You earned 100 bonus points and EXP!");
-    setPoints(p => p + 100); // Reward 100 points
-    setExperience(exp => exp + 20); // Gain EXP for leveling
-    setAffection(50); // Reset Affection Meter
+    setPoints(p => p + 100);
+    setExperience(exp => exp + 20);
+    setAffection(50);
   };
 
-  // 🌟 Give rewards when Affection reaches 100
   useEffect(() => {
     if (affection >= 100) {
       handleAffectionReward();
     }
   }, [affection]);
 
-  // 🌟 Function to handle level-up logic
   const handleLevelUp = () => {
-    const requiredExp = catStats.level * 50; // Each level needs 50 * current level EXP
+    const requiredExp = catStats.level * 50;
     if (experience >= requiredExp) {
       Alert.alert("Level Up! 🎉", `Your cat reached Level ${catStats.level + 1}!`);
-      setExperience(exp => exp - requiredExp); // Reduce experience by required amount
-      setCatStats(prev => ({ ...prev, level: prev.level + 1 })); // Level up!
+      setExperience(exp => exp - requiredExp);
+      setCatStats(prev => ({ ...prev, level: prev.level + 1 }));
     }
   };
 
-  // 🌟 Watch for Level-Up
   useEffect(() => {
     handleLevelUp();
   }, [experience]);
 
-  // 🌟 Interactions (HARDER – lower affection gain)
   const interactWithCat = (amount) => {
-    setAffection(prev => Math.min(prev + amount, 100)); // Increase Affection, max 100
+    setAffection(prev => Math.min(prev + amount, 100));
   };
 
-  // 🌟 Determine Cat Mood (Changes Image)
   const getCatMood = () => {
     if (affection > 70) return catHappy;
     if (affection >= 30) return catNeutral;
@@ -94,38 +94,40 @@ export default function CatAffectionGame() {
       <Text style={styles.header}>Cat Interaction</Text>
       <Text style={styles.points}>Points: {points.toLocaleString()}</Text>
 
-      {/* <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={styles.toggleSidebar}
-                onPress={() => setSidebarVisible(!sidebarVisible)}
-              >
-                <Text>{sidebarVisible ? 'Hide Sidebar' : 'Show Sidebar'}</Text>
-              </TouchableOpacity>
-            </View>
+      {/* Sidebar Toggle Button */}
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity
+          style={styles.toggleSidebar}
+          onPress={() => setSidebarVisible(!sidebarVisible)}
+        >
+          <Text>{sidebarVisible ? "Hide Sidebar" : "Show Sidebar"}</Text>
+        </TouchableOpacity>
+      </View>
 
-            {sidebarVisible && (
-                      <View style={styles.sidebar}>
-                        <Text style={styles.sidebarTitle}>Gardening Inventory</Text>
-                        <ScrollView>
-                          {Object.entries(availableGardening).map(([name, data]) => {
-                            const inventoryCount = gardeningInventory[name] || 0;
-                            return (
-                              <TouchableOpacity
-                                key={name}
-                                style={[
-                                  styles.inventoryItem,
-                                  selectedGardenItem?.name === name && styles.selectedItem,
-                                ]}
-                                onPress={() => selectGardenItem(name, data.image)}
-                              >
-                                <Text>{name} (Owned: {inventoryCount})</Text>
-                              </TouchableOpacity>
-                            );
-                          })}
-                        </ScrollView>
-                      </View>
-                    )} */}
-      
+      {/* Sidebar */}
+      {sidebarVisible && (
+        <View style={styles.sidebar}>
+          <Text style={styles.sidebarTitle}>Cat Accessories</Text>
+          <ScrollView>
+            {Object.entries(availableCatAccessories).map(([name, data]) => {
+              const inventoryCount = catAccessoriesInventory[name] || 0;
+              return (
+                <TouchableOpacity
+                  key={name}
+                  style={[
+                    styles.inventoryItem,
+                    selectedCatItem?.name === name && styles.selectedItem,
+                  ]}
+                  onPress={() => selectCatItem(name, data.image)}
+                >
+                  <Text>{name} (Owned: {inventoryCount})</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
+
       {!catUnlocked ? (
         <View style={styles.lockedContainer}>
           <Image source={lockedPortrait} style={styles.portrait} />
@@ -139,17 +141,15 @@ export default function CatAffectionGame() {
           <Text style={styles.catLabel}>Your Cat</Text>
           <Image source={getCatMood()} style={styles.portrait} />
           <Text style={styles.stats}>
-            Level: {catStats.level}{"\n"}
-            Experience: {experience}/{catStats.level * 50}{"\n"}
-            Affection: {affection.toFixed(0)}
+            Level: {catStats.level} | XP: {experience}/{catStats.level * 50} | Affection: {affection}
           </Text>
 
           {/* Affection Bar */}
           <View style={styles.affectionBar}>
-            <View style={{ ...styles.affectionFill, width: `${affection}%` }}></View>
+            <View style={{ ...styles.affectionFill, width: `${affection}%` }} />
           </View>
 
-          {/* Interaction Buttons (HARDER – affection gain reduced) */}
+          {/* Interaction Buttons */}
           <View style={styles.buttonRow}>
             <TouchableOpacity style={styles.actionButton} onPress={() => interactWithCat(10)}>
               <Text style={styles.buttonText}>Feed 🍖</Text>
@@ -163,14 +163,11 @@ export default function CatAffectionGame() {
             <TouchableOpacity style={styles.actionButton} onPress={() => interactWithCat(12)}>
               <Text style={styles.buttonText}>Rest 💤</Text>
             </TouchableOpacity>
-
-            {/*<CatGridComponent />*/}
-
-            
           </View>
         </View>
-        
       )}
+
+      <CatGridComponent />
     </ScrollView>
   );
 }
@@ -192,7 +189,6 @@ const styles = StyleSheet.create({
   portrait: { width: 200, height: 200, borderRadius: 100, marginBottom: 20 },
   stats: { fontSize: 16, textAlign: 'center', marginBottom: 20 },
 
-  // Affection Bar Styles
   affectionBar: { 
     width: "80%", 
     height: 20, 
@@ -201,11 +197,7 @@ const styles = StyleSheet.create({
     marginBottom: 15, 
     overflow: "hidden" 
   },
-  affectionFill: { 
-    height: "100%", 
-    backgroundColor: "#ff69b4", // Pink for Affection
-    transition: "width 0.3s"
-  },
+  affectionFill: { height: "100%", backgroundColor: "#ff69b4" },
 
   buttonRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' },
   actionButton: { backgroundColor: '#007AFF', padding: 10, margin: 5, borderRadius: 5 },
