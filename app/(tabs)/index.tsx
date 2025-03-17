@@ -3,21 +3,44 @@ import { View, Text, TouchableOpacity, StyleSheet, Button,ImageBackground  } fro
 import { GameContext } from '../context/GameContext';
 import FallingFoodManager, { FallingFoodManagerHandle } from "../../components/FallingFoodManager";
 import FloatingCatFood from "../../components/FloatingCatFood"; // Import floating food effect
+import EmojiGame from '../../components/EmojiGame';
+import CatMiniGame from '../../components/CatMiniGame';
 
 const SPAWN_THRESHOLD = 500; // one falling food per 500 points
 
+// ✅ Add this line to define the cost of unlocking the mini-game
+const UNLOCK_COST = 500; // Cost to unlock the mini-game
+
+const backgroundImage = require("../../assets/siamesecat.avif"); // Background image
+
 export default function ClickerScreen() {
-  const { points, handleClick, passiveBuildings } = useContext(GameContext);
+  const { points, handleClick, passiveBuildings, setPoints } = useContext(GameContext);
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [prevSpawnPoints, setPrevSpawnPoints] = useState(points);
   const passiveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const foodManagerRef = useRef<FallingFoodManagerHandle>(null);
   const [catFood, setCatFood] = useState([]); // Track floating cat food
+  
+  const catGameRef = useRef(null); //walking game
+  const [isUnlocked, setIsUnlocked] = useState(false); // ✅ Track if mini-game is unlocked
+
+   // ✅ Function to unlock the mini-game
+   const unlockMiniGame = () => {
+    if (points >= UNLOCK_COST) {
+      setPoints(points - UNLOCK_COST); // Deduct points
+      setIsUnlocked(true); // Unlock the mini-game
+    } else {
+      alert("Not enough points to unlock!"); // Prevent unlocking without enough points
+    }
+  };
 
   // Handle Click: Add points + spawn floating cat food
   const onClick = useCallback(() => {
     handleClick();
     spawnCatFood(); // Show floating cat food effect
+    if (isUnlocked) {
+      catGameRef.current?.moveGrid(); //walking game // Move the mini-game only if unlocked 
+    } 
   }, [handleClick]);
 
   // Fix: Only allow ONE cat food to appear per click
@@ -67,6 +90,7 @@ export default function ClickerScreen() {
 
   return (
     
+    <ImageBackground source={backgroundImage} style={styles.background}>  {/* ✅ Background Image */}
     <View style={styles.screenContainer}>
       <View style={styles.container}>
         <Text style={styles.counter}>Points: {points}</Text>
@@ -89,14 +113,37 @@ export default function ClickerScreen() {
         )}
       </View>
 
+      {/* ✅ Lock Screen (Only Shows if the Mini-Game is Locked) */}
+      {!isUnlocked && (
+        <View style={styles.lockScreen}>
+          <Text style={styles.lockText}>🔒 Mini-Game Locked 🔒</Text>
+          <Text style={styles.lockText}>Unlock for {UNLOCK_COST} points</Text>
+          <TouchableOpacity style={styles.unlockButton} onPress={unlockMiniGame}>
+            <Text style={styles.unlockText}>Unlock</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* ✅ Mini-game only runs when unlocked */}
+      {isUnlocked && (
+      <View style={styles.miniGameContainer}>
+          <CatMiniGame ref={catGameRef} />
+      </View>
+      )}
+
+     
+      {/*Emoji Game*/}
+      <EmojiGame />
+
       {/* Render the falling food manager */}
-      <FallingFoodManager ref={foodManagerRef} maxFoods={25} />
+      <FallingFoodManager ref={foodManagerRef} maxFoods={15} />
 
       {/* Render floating cat food effect (only one at a time) */}
       {catFood.map((id) => (
         <FloatingCatFood key={id} onComplete={() => setCatFood([])} />
       ))}
     </View>
+    </ImageBackground>
   );
 }
 
@@ -107,9 +154,9 @@ const styles = StyleSheet.create({
     padding: 20,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: '#eee'
+    backgroundColor: 'transparent'
   },
-  counter: { fontSize: 24, marginVertical: 10 },
+  counter: { fontSize: 24, marginVertical: 10, fontWeight: "bold", color: "black", borderWidth: 2, borderColor: "green", borderRadius: 5, padding: 5, },
   clickButton: {
     backgroundColor: "orange",
     padding: 20,
@@ -125,5 +172,43 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 5,
   },
+  // ✅ Lock Screen Styling for walking minigame
+  lockScreen: {
+    position: "Relative",
+    bottom: 80, // Adjust position
+    backgroundColor: "rgba(213, 255, 183, 0.8)", // Dark overlay
+    padding: 20,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  unlockText: {
+    fontSize: 18, // Increase text size
+    fontWeight: "bold", // Make it bold
+    color: "red", // Text
+    textTransform: "uppercase", // Make it ALL CAPS
+    letterSpacing: 1, // Add some spacing between letters
+    borderWidth: 2,
+    borderColor: "black",
+    padding: 5,
+    backgroundColor: "gold",
+    borderRadius: 5,
+  },
   sidebarTitle: { fontWeight: "bold", marginBottom: 5 },
+  miniGameContainer: {
+    maxHeight: "auto", // ✅ Limits height instead of forcing a large space
+    width: "100%", // ✅ Keeps it at a reasonable width
+    alignSelf: "center", // ✅ Prevents it from stretching full width
+    backgroundColor: "#01FEF6", // ✅ Light background for contrast
+    borderRadius: 10, // ✅ Rounded corners
+    padding: 5, // ✅ Some spacing
+    overflow: "hidden", // ✅ Prevents extra space inside
+    flexShrink: 1, // ✅ Ensures it doesn't stretch more than needed
+    position: "relative", // ✅ Allows natural placement without stretching
+  },
+  background: {
+    flex: 1,  // ✅ Makes it cover the whole screen
+    resizeMode: "cover", // ✅ Ensures it fills the screen
+    justifyContent: "center", // ✅ Centers everything inside
+  },
+  
 });

@@ -113,15 +113,16 @@ export default function CatAffectionGame() {
               const inventoryCount = catAccessoriesInventory[name] || 0;
               return (
                 <TouchableOpacity
-                  key={name}
-                  style={[
-                    styles.inventoryItem,
-                    selectedCatItem?.name === name && styles.selectedItem,
-                  ]}
-                  onPress={() => selectCatItem(name, data.image)}
-                >
-                  <Text>{name} (Owned: {inventoryCount})</Text>
-                </TouchableOpacity>
+  key={name}
+  style={[
+    styles.inventoryItem,
+    selectedCatItem?.name === name ? styles.selectedItem : null, // ✅ FIXED
+  ]}
+  onPress={() => selectCatItem(name, data.image)} // ✅ Correct function call
+>
+  <Text>{name} (Owned: {inventoryCount})</Text>
+</TouchableOpacity>
+
               );
             })}
           </ScrollView>
@@ -167,10 +168,10 @@ export default function CatAffectionGame() {
         </View>
       )}
 
-      <CatGridComponent />
+      {catUnlocked && <CatGridComponent />}
     </ScrollView>
   );
-}
+} 
 
 const styles = StyleSheet.create({
   container: { 
@@ -197,9 +198,28 @@ const styles = StyleSheet.create({
     marginBottom: 15, 
     overflow: "hidden" 
   },
+  selectedItem: { 
+    backgroundColor: "#b3d9ff", // ✅ Same as Home/Garden
+    borderRadius: 5,
+  },
   affectionFill: { height: "100%", backgroundColor: "#ff69b4" },
 
   buttonRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' },
   actionButton: { backgroundColor: '#007AFF', padding: 10, margin: 5, borderRadius: 5 },
   buttonText: { color: '#fff', fontSize: 16 },
+  toggleSidebar: { 
+    padding: 10, 
+    alignItems: "center", 
+    backgroundColor: "#ddd", 
+    borderRadius: 5,
+    width: "90%",
+  },
+  sidebar: {
+    position: "relative", 
+    backgroundColor: "#eee",
+    padding: 10,
+    borderRadius: 5,
+    width: "90%",
+    marginTop: 20,
+  },
 });

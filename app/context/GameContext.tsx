@@ -8,10 +8,20 @@ export const GameContext = createContext(null);
 const availableBuildings = { 
   "Tanbark 🍂": { cost: 50, income: 1 },
   "Tiny Ball 🔴": { cost: 250, income: 2 },
-  "Football 🏈": { cost: 2500, income: 1 },
-  "Teddy Bear 🧸": { cost: 50000, income: 1 },
-  "Stuffed Snowman ⛄": { cost: 2000000, income: 1 },
-  "Fern's Bird 🦜": { cost: 175000000, income: 1 },
+  "Football 🏈": { cost: 2500, income: 4 },
+  "Mouse🐁": { cost: 7500, income: 8 },
+  "Snake🐍": { cost: 15000, income: 16 },
+  "Teddy Bear 🧸": { cost: 30000, income: 32 },
+  "Snowman ⛄": { cost: 75000, income: 100 },
+  "Fish 🐟": { cost: 150000, income: 200 },
+  "Clownfish 🐠": { cost: 350000, income: 400 },
+  "Lobster 🦞": { cost: 750000, income: 800 },
+  "Dolphin 🐬": { cost: 1500000, income: 1600 },
+  "Shark 🦈": { cost: 3500000, income: 4000 },
+  "8 Ball 🎱": { cost: 7500000, income: 10000 },
+  "Lucky Dice 🎲": { cost: 25000000, income: 15000 },
+  "Jack O' Lantern 🎃": { cost: 50000000, income: 50000 },
+  "Fern's Bird 🦜": { cost: 1500000000, income: 100000 },
 };
 
 const availableFurniture = {
@@ -51,7 +61,7 @@ const MAX_CATS = 4; // maximum number of cats that can be unlocked
 
 export function GameProvider({ children }) {
   // Basic game state
-  const [points, setPoints] = useState(1000000000);
+  const [points, setPoints] = useState(500);
   const [totalPointsEarned, setTotalPointsEarned] = useState(0);
   const [clicks, setClicks] = useState(0);
   // Instead of auto-adding cats, start with an empty list
@@ -93,7 +103,7 @@ export function GameProvider({ children }) {
 
   const handleClick = () => {
     setClicks(prev => prev + 1);
-    addPoints(100000);
+    addPoints(1);
   };
 
   // ---------------- Cat Unlocking ---------------- //

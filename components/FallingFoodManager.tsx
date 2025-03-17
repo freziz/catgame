@@ -11,7 +11,7 @@ interface FallingFoodManagerProps {
 }
 
 const FallingFoodManager = forwardRef<FallingFoodManagerHandle, FallingFoodManagerProps>(
-  ({ maxFoods = 25 }, ref) => {
+  ({ maxFoods = 15 }, ref) => {
     const [foods, setFoods] = useState<number[]>([]);
 
     useImperativeHandle(ref, () => ({
